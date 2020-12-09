@@ -36,7 +36,7 @@ namespace MongoDB.Bson.Serialization
         private static readonly ConcurrentDictionary<Type, BsonClassMap> __classMaps = new ConcurrentDictionary<Type, BsonClassMap>();
 
         // TODO BD should freeze be synchronized on instance level
-        private static readonly object _freezeSyncRoot = new object();
+        private static readonly object __freezeSyncRoot = new object();
         private static int __freezeNestingLevel = 0;
         private static readonly Queue<Type> __knownTypesQueue = new Queue<Type>();
         private static readonly MethodInfo __getUninitializedObjectMethodInfo = GetGetUninitializedObjectMethodInfo();
@@ -456,7 +456,7 @@ namespace MongoDB.Bson.Serialization
                 return this;
             }
 
-            lock (_freezeSyncRoot)
+            lock (__freezeSyncRoot)
             {
                 if (_frozen)
                 {
