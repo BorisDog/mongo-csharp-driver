@@ -22,6 +22,8 @@ class Person
 
 	public int Age { get; set; }
 
+	public Dictionary<string, Person> Children { get; set; }
+
 	public IEnumerable<Pet> Pets { get; set; }
 
 	public int[] FavoriteNumbers { get; set; }
@@ -218,15 +220,20 @@ Find(p => p.Name != "Jack" && p.Name != "Jim");
 #### $not
 
 ```csharp
-// no example yet
+Find(p => !(p.Age < 18))
+```
+```json
+{ Age: { $not: { $lt: 18 } } }
 ```
 
 #### $nor
 
 ```csharp
-// no example yet
+Find(p => !(p.Age < 18 || p.Age >= 65))
 ```
-
+```json
+{ $nor: [{ Age: { $lt: 18 } }, { Age: { $gte: 65 } }] }
+```
 
 ### Element
 
@@ -235,13 +242,19 @@ See the [MongoDB documentation]({{< docsref "reference/operator/query/#element" 
 #### $exists
 
 ```csharp
-// no example yet
+Find(p => p.Children.ContainsKey("John"))
+```
+```json
+{ "Children.John": { $exists: true } }
 ```
 
 #### $type
 
 ```csharp
-// no example yet
+Find(Builders<Person>.Filter.Type(p => p.Name, BsonType.String))
+```
+```json
+{ "Name" : { "$type" : 2 } }
 ```
 
 ### Evaluation
@@ -251,14 +264,54 @@ See the [MongoDB documentation]({{< docsref "reference/operator/query/#evaluatio
 #### $mod
 
 ```csharp
-// no example yet
+Find(p => p.Age % 2 == 0)
+```
+```json
+{ Age: { $mod: [NumberLong(2), NumberLong(0)] } }
 ```
 
 #### $regex
 
+---
 ```csharp
-// no example yet
+Find(p => p.Name[0] == 'a')
 ```
+```json
+{ Name: /^.{0}a/s }
+```
+---
+```csharp
+Find(p => p.Name.Length >= 5)
+```
+```json
+{ Name: /^.{5,}$/s }
+```
+---
+```
+Find(p => p.Name.ToLower() == "john")
+```
+```json
+{ Name: /^john$/i }
+```
+{{% note %}}`ToLowerInvariant`, `ToUpper`, and `ToUpperInvariant` are also supported.{{% /note %}}
+
+---
+```csharp
+Find(p => p.Name.Contains("John"))
+```
+```json
+{ Name: /John/s }
+```
+{{% note %}}`StartsWith` and `EndsWith` are also supported.{{% /note %}}
+
+---
+```csharp
+Find(p => p.Name.ToLower().Contains("John"))
+```
+```json
+{ Name: /John/is }
+```
+{{% note %}}`ToLowerInvariant`, `ToUpper`, `ToUpperInvariant`, `Trim`, `TrimStart`, and `TrimEnd` are also supported for the first function call. `StartsWith` and `EndsWith` are also supported for the second function call.{{% /note %}}
 
 #### $text
 
@@ -331,7 +384,7 @@ Find(x => x.FavoriteNumbers.Any(n => n < 42 && n > 21));
 { FavoriteNumbers: { $elemMatch: { $lt: 42, $gt: 21 } } }
 ```
 
-{{% note %}}Depending on the complexity and the operators involved in the Any method call, the driver might eliminate the $elemMatch completely. For instance,
+{{% note %}}Depending on the complexity and the operators involved in the Any method call, the driver might eliminate the `$elemMatch` completely. For instance,
 
 ```csharp
 Find(x => x.Pets.Any(p => p.Name == "Fluffy"))
@@ -972,7 +1025,7 @@ p => p.CreatedAtUtc.Day);
 The .NET constant for day of week is 1 less than that in MongoDB. As such, we must subtract 1 from the MongoDB version in order for mapping back to the .NET type to be accurate.
 
 ```csharp
-p => p.CreatedAtUtc.DayOfWeek);
+p => p.CreatedAtUtc.DayOfWeek;
 ```
 ```json
 { $subtract: [ { $dayOfWeek: '$CreatedAtUtc' }, 1 ] }
@@ -981,7 +1034,7 @@ p => p.CreatedAtUtc.DayOfWeek);
 #### $year
 
 ```csharp
-p => p.CreatedAtUtc.Year);
+p => p.CreatedAtUtc.Year;
 ```
 ```json
 { $year: '$CreatedAtUtc' }
@@ -990,7 +1043,7 @@ p => p.CreatedAtUtc.Year);
 #### $month
 
 ```csharp
-p => p.CreatedAtUtc.Month);
+p => p.CreatedAtUtc.Month;
 ```
 ```json
 { $month: '$CreatedAtUtc' }
@@ -1005,7 +1058,7 @@ p => p.CreatedAtUtc.Month);
 #### $hour
 
 ```csharp
-p => p.CreatedAtUtc.Hour);
+p => p.CreatedAtUtc.Hour;
 ```
 ```json
 { $hour: '$CreatedAtUtc' }
@@ -1014,7 +1067,7 @@ p => p.CreatedAtUtc.Hour);
 #### $minute
 
 ```csharp
-p => p.CreatedAtUtc.Minute);
+p => p.CreatedAtUtc.Minute;
 ```
 ```json
 { $minute: '$CreatedAtUtc' }
@@ -1023,7 +1076,7 @@ p => p.CreatedAtUtc.Minute);
 #### $second
 
 ```csharp
-p => p.CreatedAtUtc.Second);
+p => p.CreatedAtUtc.Second;
 ```
 ```json
 { $second: '$CreatedAtUtc' }
@@ -1032,7 +1085,7 @@ p => p.CreatedAtUtc.Second);
 #### $millisecond
 
 ```csharp
-p => p.CreatedAtUtc.Millisecond);
+p => p.CreatedAtUtc.Millisecond;
 ```
 ```json
 { $millisecond: '$CreatedAtUtc' }
