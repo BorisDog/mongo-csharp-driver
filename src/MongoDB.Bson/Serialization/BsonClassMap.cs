@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -32,9 +33,12 @@ namespace MongoDB.Bson.Serialization
     public class BsonClassMap
     {
         // private static fields
-        private readonly static Dictionary<Type, BsonClassMap> __classMaps = new Dictionary<Type, BsonClassMap>();
-        private readonly static Queue<Type> __knownTypesQueue = new Queue<Type>();
+        private static readonly ConcurrentDictionary<Type, BsonClassMap> __classMaps = new ConcurrentDictionary<Type, BsonClassMap>();
+
+        // TODO BD should freeze be synchronized on instance level
+        private static readonly object _freezeSyncRoot = new object();
         private static int __freezeNestingLevel = 0;
+        private static readonly Queue<Type> __knownTypesQueue = new Queue<Type>();
         private static readonly MethodInfo __getUninitializedObjectMethodInfo = GetGetUninitializedObjectMethodInfo();
 
         // private fields
@@ -47,7 +51,7 @@ namespace MongoDB.Bson.Serialization
         private List<BsonMemberMap> _declaredMemberMaps; // only the members declared in this class
         private readonly BsonTrie<int> _elementTrie;
 
-        private bool _frozen; // once a class map has been frozen no further changes are allowed
+        private /* TODO BD volatile ?*/ bool _frozen; // once a class map has been frozen no further changes are allowed
         private BsonClassMap _baseClassMap; // null for class object and interfaces
         private volatile IDiscriminatorConvention _discriminatorConvention;
         private Func<object> _creator;
@@ -285,15 +289,7 @@ namespace MongoDB.Bson.Serialization
         /// <returns>All registered class maps.</returns>
         public static IEnumerable<BsonClassMap> GetRegisteredClassMaps()
         {
-            BsonSerializer.ConfigLock.EnterReadLock();
-            try
-            {
-                return __classMaps.Values.ToList(); // return a copy for thread safety
-            }
-            finally
-            {
-                BsonSerializer.ConfigLock.ExitReadLock();
-            }
+            return __classMaps.Values.ToList(); // return a copy for thread safety
         }
 
         /// <summary>
@@ -308,15 +304,7 @@ namespace MongoDB.Bson.Serialization
                 throw new ArgumentNullException("type");
             }
 
-            BsonSerializer.ConfigLock.EnterReadLock();
-            try
-            {
-                return __classMaps.ContainsKey(type);
-            }
-            finally
-            {
-                BsonSerializer.ConfigLock.ExitReadLock();
-            }
+            return __classMaps.ContainsKey(type);
         }
 
         /// <summary>
@@ -331,42 +319,20 @@ namespace MongoDB.Bson.Serialization
                 throw new ArgumentNullException("classType");
             }
 
-            BsonSerializer.ConfigLock.EnterReadLock();
-            try
+            var classMap = __classMaps.GetOrAdd(classType, type =>
             {
-                BsonClassMap classMap;
-                if (__classMaps.TryGetValue(classType, out classMap))
-                {
-                    if (classMap.IsFrozen)
-                    {
-                        return classMap;
-                    }
-                }
-            }
-            finally
-            {
-                BsonSerializer.ConfigLock.ExitReadLock();
-            }
+                // automatically create a classMap for classType and register it
+                var classMapDefinition = typeof(BsonClassMap<>);
+                var classMapType = classMapDefinition.MakeGenericType(type);
+                var newClassMap = (BsonClassMap)Activator.CreateInstance(classMapType);
+                newClassMap.AutoMap();
 
-            BsonSerializer.ConfigLock.EnterWriteLock();
-            try
-            {
-                BsonClassMap classMap;
-                if (!__classMaps.TryGetValue(classType, out classMap))
-                {
-                    // automatically create a classMap for classType and register it
-                    var classMapDefinition = typeof(BsonClassMap<>);
-                    var classMapType = classMapDefinition.MakeGenericType(classType);
-                    classMap = (BsonClassMap)Activator.CreateInstance(classMapType);
-                    classMap.AutoMap();
-                    RegisterClassMap(classMap);
-                }
-                return classMap.Freeze();
-            }
-            finally
-            {
-                BsonSerializer.ConfigLock.ExitWriteLock();
-            }
+                RegisterClassMap(newClassMap);
+
+                return newClassMap;
+            });
+
+            return classMap.Freeze();
         }
 
         /// <summary>
@@ -403,17 +369,10 @@ namespace MongoDB.Bson.Serialization
                 throw new ArgumentNullException("classMap");
             }
 
-            BsonSerializer.ConfigLock.EnterWriteLock();
-            try
-            {
-                // note: class maps can NOT be replaced (because derived classes refer to existing instance)
-                __classMaps.Add(classMap.ClassType, classMap);
-                BsonSerializer.RegisterDiscriminator(classMap.ClassType, classMap.Discriminator);
-            }
-            finally
-            {
-                BsonSerializer.ConfigLock.ExitWriteLock();
-            }
+            // note: class maps can NOT be replaced (because derived classes refer to existing instance)
+            // TODO BD should both registrations occur atomically?
+            __classMaps.TryAdd(classMap.ClassType, classMap);
+            BsonSerializer.RegisterDiscriminator(classMap.ClassType, classMap.Discriminator);
         }
 
         // private static methods
@@ -492,149 +451,139 @@ namespace MongoDB.Bson.Serialization
         /// <returns>The frozen class map.</returns>
         public BsonClassMap Freeze()
         {
-            BsonSerializer.ConfigLock.EnterReadLock();
-            try
+            if (_frozen)
+            {
+                return this;
+            }
+
+            lock (_freezeSyncRoot)
             {
                 if (_frozen)
                 {
                     return this;
                 }
-            }
-            finally
-            {
-                BsonSerializer.ConfigLock.ExitReadLock();
-            }
 
-            BsonSerializer.ConfigLock.EnterWriteLock();
-            try
-            {
-                if (!_frozen)
+                __freezeNestingLevel++;
+                try
                 {
-                    __freezeNestingLevel++;
-                    try
+                    var baseType = _classType.GetTypeInfo().BaseType;
+                    if (baseType != null)
                     {
-                        var baseType = _classType.GetTypeInfo().BaseType;
-                        if (baseType != null)
+                        if (_baseClassMap == null)
                         {
-                            if (_baseClassMap == null)
-                            {
-                                _baseClassMap = LookupClassMap(baseType);
-                            }
-                            _baseClassMap.Freeze();
-                            _discriminatorIsRequired |= _baseClassMap._discriminatorIsRequired;
-                            _hasRootClass |= (_isRootClass || _baseClassMap.HasRootClass);
-                            _allMemberMaps.AddRange(_baseClassMap.AllMemberMaps);
-                            if (_baseClassMap.IgnoreExtraElements && _baseClassMap.IgnoreExtraElementsIsInherited)
-                            {
-                                _ignoreExtraElements = true;
-                                _ignoreExtraElementsIsInherited = true;
-                            }
+                            _baseClassMap = LookupClassMap(baseType);
                         }
-                        _declaredMemberMaps = _declaredMemberMaps.OrderBy(m => m.Order).ToList(); // we're counting on OrderBy being a stable sort
-                        _allMemberMaps.AddRange(_declaredMemberMaps);
-
-                        if (_idMemberMap == null)
+                        _baseClassMap.Freeze();
+                        _discriminatorIsRequired |= _baseClassMap._discriminatorIsRequired;
+                        _hasRootClass |= (_isRootClass || _baseClassMap.HasRootClass);
+                        _allMemberMaps.AddRange(_baseClassMap.AllMemberMaps);
+                        if (_baseClassMap.IgnoreExtraElements && _baseClassMap.IgnoreExtraElementsIsInherited)
                         {
-                            // see if we can inherit the idMemberMap from our base class
-                            if (_baseClassMap != null)
-                            {
-                                _idMemberMap = _baseClassMap.IdMemberMap;
-                            }
+                            _ignoreExtraElements = true;
+                            _ignoreExtraElementsIsInherited = true;
+                        }
+                    }
+                    _declaredMemberMaps = _declaredMemberMaps.OrderBy(m => m.Order).ToList(); // we're counting on OrderBy being a stable sort
+                    _allMemberMaps.AddRange(_declaredMemberMaps);
+
+                    if (_idMemberMap == null)
+                    {
+                        // see if we can inherit the idMemberMap from our base class
+                        if (_baseClassMap != null)
+                        {
+                            _idMemberMap = _baseClassMap.IdMemberMap;
+                        }
+                    }
+                    else
+                    {
+                        if (_idMemberMap.ClassMap == this)
+                        {
+                            // conventions could have set this to an improper value
+                            _idMemberMap.SetElementName("_id");
+                        }
+                    }
+
+                    if (_extraElementsMemberMap == null)
+                    {
+                        // see if we can inherit the extraElementsMemberMap from our base class
+                        if (_baseClassMap != null)
+                        {
+                            _extraElementsMemberMap = _baseClassMap.ExtraElementsMemberMap;
+                        }
+                    }
+
+                    _extraElementsMemberIndex = -1;
+                    for (int memberIndex = 0; memberIndex < _allMemberMaps.Count; ++memberIndex)
+                    {
+                        var memberMap = _allMemberMaps[memberIndex];
+                        int conflictingMemberIndex;
+                        if (!_elementTrie.TryGetValue(memberMap.ElementName, out conflictingMemberIndex))
+                        {
+                            _elementTrie.Add(memberMap.ElementName, memberIndex);
                         }
                         else
                         {
-                            if (_idMemberMap.ClassMap == this)
-                            {
-                                // conventions could have set this to an improper value
-                                _idMemberMap.SetElementName("_id");
-                            }
-                        }
+                            var conflictingMemberMap = _allMemberMaps[conflictingMemberIndex];
+                            var fieldOrProperty = (memberMap.MemberInfo is FieldInfo) ? "field" : "property";
+                            var conflictingFieldOrProperty = (conflictingMemberMap.MemberInfo is FieldInfo) ? "field" : "property";
+                            var conflictingType = conflictingMemberMap.MemberInfo.DeclaringType;
 
-                        if (_extraElementsMemberMap == null)
-                        {
-                            // see if we can inherit the extraElementsMemberMap from our base class
-                            if (_baseClassMap != null)
+                            string message;
+                            if (conflictingType == _classType)
                             {
-                                _extraElementsMemberMap = _baseClassMap.ExtraElementsMemberMap;
-                            }
-                        }
-
-                        _extraElementsMemberIndex = -1;
-                        for (int memberIndex = 0; memberIndex < _allMemberMaps.Count; ++memberIndex)
-                        {
-                            var memberMap = _allMemberMaps[memberIndex];
-                            int conflictingMemberIndex;
-                            if (!_elementTrie.TryGetValue(memberMap.ElementName, out conflictingMemberIndex))
-                            {
-                                _elementTrie.Add(memberMap.ElementName, memberIndex);
+                                message = string.Format(
+                                    "The {0} '{1}' of type '{2}' cannot use element name '{3}' because it is already being used by {4} '{5}'.",
+                                    fieldOrProperty, memberMap.MemberName, _classType.FullName, memberMap.ElementName, conflictingFieldOrProperty, conflictingMemberMap.MemberName);
                             }
                             else
                             {
-                                var conflictingMemberMap = _allMemberMaps[conflictingMemberIndex];
-                                var fieldOrProperty = (memberMap.MemberInfo is FieldInfo) ? "field" : "property";
-                                var conflictingFieldOrProperty = (conflictingMemberMap.MemberInfo is FieldInfo) ? "field" : "property";
-                                var conflictingType = conflictingMemberMap.MemberInfo.DeclaringType;
-
-                                string message;
-                                if (conflictingType == _classType)
-                                {
-                                    message = string.Format(
-                                        "The {0} '{1}' of type '{2}' cannot use element name '{3}' because it is already being used by {4} '{5}'.",
-                                        fieldOrProperty, memberMap.MemberName, _classType.FullName, memberMap.ElementName, conflictingFieldOrProperty, conflictingMemberMap.MemberName);
-                                }
-                                else
-                                {
-                                    message = string.Format(
-                                        "The {0} '{1}' of type '{2}' cannot use element name '{3}' because it is already being used by {4} '{5}' of type '{6}'.",
-                                        fieldOrProperty, memberMap.MemberName, _classType.FullName, memberMap.ElementName, conflictingFieldOrProperty, conflictingMemberMap.MemberName, conflictingType.FullName);
-                                }
-                                throw new BsonSerializationException(message);
+                                message = string.Format(
+                                    "The {0} '{1}' of type '{2}' cannot use element name '{3}' because it is already being used by {4} '{5}' of type '{6}'.",
+                                    fieldOrProperty, memberMap.MemberName, _classType.FullName, memberMap.ElementName, conflictingFieldOrProperty, conflictingMemberMap.MemberName, conflictingType.FullName);
                             }
-                            if (memberMap == _extraElementsMemberMap)
-                            {
-                                _extraElementsMemberIndex = memberIndex;
-                            }
+                            throw new BsonSerializationException(message);
                         }
-
-                        // mark this classMap frozen before we start working on knownTypes
-                        // because we might get back to this same classMap while processing knownTypes
-                        foreach (var creatorMap in _creatorMaps)
+                        if (memberMap == _extraElementsMemberMap)
                         {
-                            creatorMap.Freeze();
-                        }
-                        foreach (var memberMap in _declaredMemberMaps)
-                        {
-                            memberMap.Freeze();
-                        }
-                        _frozen = true;
-
-                        // use a queue to postpone processing of known types until we get back to the first level call to Freeze
-                        // this avoids infinite recursion when going back down the inheritance tree while processing known types
-                        foreach (var knownType in _knownTypes)
-                        {
-                            __knownTypesQueue.Enqueue(knownType);
-                        }
-
-                        // if we are back to the first level go ahead and process any queued known types
-                        if (__freezeNestingLevel == 1)
-                        {
-                            while (__knownTypesQueue.Count != 0)
-                            {
-                                var knownType = __knownTypesQueue.Dequeue();
-                                LookupClassMap(knownType); // will AutoMap and/or Freeze knownType if necessary
-                            }
+                            _extraElementsMemberIndex = memberIndex;
                         }
                     }
-                    finally
+
+                    // mark this classMap frozen before we start working on knownTypes
+                    // because we might get back to this same classMap while processing knownTypes
+                    foreach (var creatorMap in _creatorMaps)
                     {
-                        __freezeNestingLevel--;
+                        creatorMap.Freeze();
+                    }
+                    foreach (var memberMap in _declaredMemberMaps)
+                    {
+                        memberMap.Freeze();
+                    }
+                    _frozen = true;
+
+                    // use a queue to postpone processing of known types until we get back to the first level call to Freeze
+                    // this avoids infinite recursion when going back down the inheritance tree while processing known types
+                    foreach (var knownType in _knownTypes)
+                    {
+                        __knownTypesQueue.Enqueue(knownType);
+                    }
+
+                    // if we are back to the first level go ahead and process any queued known types
+                    if (__freezeNestingLevel == 1)
+                    {
+                        while (__knownTypesQueue.Count != 0)
+                        {
+                            var knownType = __knownTypesQueue.Dequeue();
+                            LookupClassMap(knownType); // will AutoMap and/or Freeze knownType if necessary
+                        }
                     }
                 }
+                finally
+                {
+                    __freezeNestingLevel--;
+                }
             }
-            finally
-            {
-                BsonSerializer.ConfigLock.ExitWriteLock();
-            }
+
             return this;
         }
 

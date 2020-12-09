@@ -14,18 +14,17 @@
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 
 // don't add using statement for MongoDB.Bson.Serialization.Serializers to minimize dependencies on DefaultSerializer
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.IdGenerators;
-using MongoDB.Bson.Serialization.Serializers;
 
 namespace MongoDB.Bson.Serialization
 {
@@ -35,14 +34,13 @@ namespace MongoDB.Bson.Serialization
     public static class BsonSerializer
     {
         // private static fields
-        private static ReaderWriterLockSlim __configLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-        private static Dictionary<Type, IIdGenerator> __idGenerators = new Dictionary<Type, IIdGenerator>();
-        private static Dictionary<Type, IDiscriminatorConvention> __discriminatorConventions = new Dictionary<Type, IDiscriminatorConvention>();
-        private static Dictionary<BsonValue, HashSet<Type>> __discriminators = new Dictionary<BsonValue, HashSet<Type>>();
-        private static HashSet<Type> __discriminatedTypes = new HashSet<Type>();
-        private static BsonSerializerRegistry __serializerRegistry;
-        private static TypeMappingSerializationProvider __typeMappingSerializationProvider;
-        private static HashSet<Type> __typesWithRegisteredKnownTypes = new HashSet<Type>();
+        private static readonly ConcurrentDictionary<Type, IIdGenerator> __idGenerators = new ConcurrentDictionary<Type, IIdGenerator>();
+        private static readonly ConcurrentDictionary<Type, IDiscriminatorConvention> __discriminatorConventions = new ConcurrentDictionary<Type, IDiscriminatorConvention>();
+        private static readonly ConcurrentDictionary<BsonValue, HashSet<Type>> __discriminators = new ConcurrentDictionary<BsonValue, HashSet<Type>>();
+        private static readonly ConcurrentDictionary<Type, Type> __discriminatedTypes = new ConcurrentDictionary<Type, Type>();
+        private static readonly BsonSerializerRegistry __serializerRegistry = new BsonSerializerRegistry();
+        private static readonly TypeMappingSerializationProvider __typeMappingSerializationProvider = new TypeMappingSerializationProvider();
+        private static readonly ConcurrentDictionary<Type, Type> __typesWithRegisteredKnownTypes = new ConcurrentDictionary<Type, Type>();
 
         private static bool __useNullIdChecker = false;
         private static bool __useZeroIdChecker = false;
@@ -50,7 +48,7 @@ namespace MongoDB.Bson.Serialization
         // static constructor
         static BsonSerializer()
         {
-            CreateSerializerRegistry();
+            RegisterSerializationProviders();
             RegisterIdGenerators();
         }
 
@@ -79,12 +77,6 @@ namespace MongoDB.Bson.Serialization
         {
             get { return __useZeroIdChecker; }
             set { __useZeroIdChecker = value; }
-        }
-
-        // internal static properties
-        internal static ReaderWriterLockSlim ConfigLock
-        {
-            get { return __configLock; }
         }
 
         // public static methods
@@ -276,7 +268,7 @@ namespace MongoDB.Bson.Serialization
         public static bool IsTypeDiscriminated(Type type)
         {
             var typeInfo = type.GetTypeInfo();
-            return typeInfo.IsInterface || __discriminatedTypes.Contains(type);
+            return typeInfo.IsInterface || __discriminatedTypes.ContainsKey(type);
         }
 
         /// <summary>
@@ -295,56 +287,49 @@ namespace MongoDB.Bson.Serialization
             // note: EnsureKnownTypesAreRegistered handles its own locking so call from outside any lock
             EnsureKnownTypesAreRegistered(nominalType);
 
-            __configLock.EnterReadLock();
-            try
-            {
-                Type actualType = null;
+            var nominalTypeInfo = nominalType.GetTypeInfo();
+            Type actualType = null;
 
-                HashSet<Type> hashSet;
-                if (__discriminators.TryGetValue(discriminator, out hashSet))
+            HashSet<Type> hashSet;
+            if (__discriminators.TryGetValue(discriminator, out hashSet))
+            {
+                foreach (var type in hashSet)
                 {
-                    foreach (var type in hashSet)
+                    if (nominalTypeInfo.IsAssignableFrom(type))
                     {
-                        if (nominalType.GetTypeInfo().IsAssignableFrom(type))
+                        if (actualType == null)
                         {
-                            if (actualType == null)
-                            {
-                                actualType = type;
-                            }
-                            else
-                            {
-                                string message = string.Format("Ambiguous discriminator '{0}'.", discriminator);
-                                throw new BsonSerializationException(message);
-                            }
+                            actualType = type;
+                        }
+                        else
+                        {
+                            string message = string.Format("Ambiguous discriminator '{0}'.", discriminator);
+                            throw new BsonSerializationException(message);
                         }
                     }
                 }
-
-                if (actualType == null && discriminator.IsString)
-                {
-                    actualType = TypeNameDiscriminator.GetActualType(discriminator.AsString); // see if it's a Type name
-                }
-
-                if (actualType == null)
-                {
-                    string message = string.Format("Unknown discriminator value '{0}'.", discriminator);
-                    throw new BsonSerializationException(message);
-                }
-
-                if (!nominalType.GetTypeInfo().IsAssignableFrom(actualType))
-                {
-                    string message = string.Format(
-                        "Actual type {0} is not assignable to expected type {1}.",
-                        actualType.FullName, nominalType.FullName);
-                    throw new BsonSerializationException(message);
-                }
-
-                return actualType;
             }
-            finally
+
+            if (actualType == null && discriminator.IsString)
             {
-                __configLock.ExitReadLock();
+                actualType = TypeNameDiscriminator.GetActualType(discriminator.AsString); // see if it's a Type name
             }
+
+            if (actualType == null)
+            {
+                string message = string.Format("Unknown discriminator value '{0}'.", discriminator);
+                throw new BsonSerializationException(message);
+            }
+
+            if (!nominalTypeInfo.IsAssignableFrom(actualType))
+            {
+                string message = string.Format(
+                    "Actual type {0} is not assignable to expected type {1}.",
+                    actualType.FullName, nominalType.FullName);
+                throw new BsonSerializationException(message);
+            }
+
+            return actualType;
         }
 
         /// <summary>
@@ -356,73 +341,54 @@ namespace MongoDB.Bson.Serialization
         {
             var typeInfo = type.GetTypeInfo();
 
-            __configLock.EnterReadLock();
-            try
+            var convention = __discriminatorConventions.GetOrAdd(type, t =>
             {
-                IDiscriminatorConvention convention;
-                if (__discriminatorConventions.TryGetValue(type, out convention))
+                IDiscriminatorConvention newConvention = null;
+
+                if (type == typeof(object))
                 {
-                    return convention;
+                    // if there is no convention registered for object register the default one
+                    newConvention = new ObjectDiscriminatorConvention("_t");
+                    RegisterDiscriminatorConvention(typeof(object), newConvention);
                 }
-            }
-            finally
-            {
-                __configLock.ExitReadLock();
-            }
-
-            __configLock.EnterWriteLock();
-            try
-            {
-                IDiscriminatorConvention convention;
-                if (!__discriminatorConventions.TryGetValue(type, out convention))
+                else if (typeInfo.IsInterface)
                 {
-                    if (type == typeof(object))
+                    // TODO: should convention for interfaces be inherited from parent interfaces?
+                    newConvention = LookupDiscriminatorConvention(typeof(object));
+                    RegisterDiscriminatorConvention(type, newConvention);
+                }
+                else
+                {
+                    // inherit the discriminator convention from the closest parent (that isn't object) that has one
+                    // otherwise default to the standard hierarchical convention
+                    Type parentType = type.GetTypeInfo().BaseType;
+                    while (newConvention == null)
                     {
-                        // if there is no convention registered for object register the default one
-                        convention = new ObjectDiscriminatorConvention("_t");
-                        RegisterDiscriminatorConvention(typeof(object), convention);
-                    }
-                    else if (typeInfo.IsInterface)
-                    {
-                        // TODO: should convention for interfaces be inherited from parent interfaces?
-                        convention = LookupDiscriminatorConvention(typeof(object));
-                        RegisterDiscriminatorConvention(type, convention);
-                    }
-                    else
-                    {
-                        // inherit the discriminator convention from the closest parent (that isn't object) that has one
-                        // otherwise default to the standard hierarchical convention
-                        Type parentType = type.GetTypeInfo().BaseType;
-                        while (convention == null)
+                        if (parentType == typeof(object))
                         {
-                            if (parentType == typeof(object))
-                            {
-                                convention = StandardDiscriminatorConvention.Hierarchical;
-                                break;
-                            }
-                            if (__discriminatorConventions.TryGetValue(parentType, out convention))
-                            {
-                                break;
-                            }
-                            parentType = parentType.GetTypeInfo().BaseType;
+                            newConvention = StandardDiscriminatorConvention.Hierarchical;
+                            break;
                         }
+                        if (__discriminatorConventions.TryGetValue(parentType, out newConvention))
+                        {
+                            break;
+                        }
+                        parentType = parentType.GetTypeInfo().BaseType;
+                    }
 
-                        // register this convention for all types between this and the parent type where we found the convention
-                        var unregisteredType = type;
-                        while (unregisteredType != parentType)
-                        {
-                            RegisterDiscriminatorConvention(unregisteredType, convention);
-                            unregisteredType = unregisteredType.GetTypeInfo().BaseType;
-                        }
+                    // register this convention for all types between this and the parent type where we found the convention
+                    var unregisteredType = type;
+                    while (unregisteredType != parentType)
+                    {
+                        RegisterDiscriminatorConvention(unregisteredType, newConvention);
+                        unregisteredType = unregisteredType.GetTypeInfo().BaseType;
                     }
                 }
 
-                return convention;
-            }
-            finally
-            {
-                __configLock.ExitWriteLock();
-            }
+                return newConvention;
+            });
+
+            return convention;
         }
 
         /// <summary>
@@ -432,56 +398,31 @@ namespace MongoDB.Bson.Serialization
         /// <returns>An IdGenerator for the Id type.</returns>
         public static IIdGenerator LookupIdGenerator(Type type)
         {
-            var typeInfo = type.GetTypeInfo();
-            __configLock.EnterReadLock();
-            try
+            var idGenerator = __idGenerators.GetOrAdd(type, t =>
             {
-                IIdGenerator idGenerator;
-                if (__idGenerators.TryGetValue(type, out idGenerator))
+                IIdGenerator newGenerator = null;
+
+                if (t.GetTypeInfo().IsValueType && __useZeroIdChecker)
                 {
-                    return idGenerator;
+                    var iEquatableDefinition = typeof(IEquatable<>);
+                    var iEquatableType = iEquatableDefinition.MakeGenericType(type);
+                    if (iEquatableType.GetTypeInfo().IsAssignableFrom(type))
+                    {
+                        var zeroIdCheckerDefinition = typeof(ZeroIdChecker<>);
+                        var zeroIdCheckerType = zeroIdCheckerDefinition.MakeGenericType(type);
+                        newGenerator = (IIdGenerator)Activator.CreateInstance(zeroIdCheckerType);
+                    }
                 }
-            }
-            finally
-            {
-                __configLock.ExitReadLock();
-            }
-
-            __configLock.EnterWriteLock();
-            try
-            {
-                IIdGenerator idGenerator;
-                if (!__idGenerators.TryGetValue(type, out idGenerator))
+                else if (__useNullIdChecker)
                 {
-                    if (typeInfo.IsValueType && __useZeroIdChecker)
-                    {
-                        var iEquatableDefinition = typeof(IEquatable<>);
-                        var iEquatableType = iEquatableDefinition.MakeGenericType(type);
-                        if (iEquatableType.GetTypeInfo().IsAssignableFrom(type))
-                        {
-                            var zeroIdCheckerDefinition = typeof(ZeroIdChecker<>);
-                            var zeroIdCheckerType = zeroIdCheckerDefinition.MakeGenericType(type);
-                            idGenerator = (IIdGenerator)Activator.CreateInstance(zeroIdCheckerType);
-                        }
-                    }
-                    else if (__useNullIdChecker)
-                    {
-                        idGenerator = NullIdChecker.Instance;
-                    }
-                    else
-                    {
-                        idGenerator = null;
-                    }
-
-                    __idGenerators[type] = idGenerator; // remember it even if it's null
+                    newGenerator = NullIdChecker.Instance;
                 }
 
-                return idGenerator;
-            }
-            finally
-            {
-                __configLock.ExitWriteLock();
-            }
+                // remember it even if it's null
+                return newGenerator;
+            });
+
+            return idGenerator;
         }
 
         /// <summary>
@@ -518,30 +459,15 @@ namespace MongoDB.Bson.Serialization
                 throw new BsonSerializationException(message);
             }
 
-            __configLock.EnterWriteLock();
-            try
-            {
-                HashSet<Type> hashSet;
-                if (!__discriminators.TryGetValue(discriminator, out hashSet))
-                {
-                    hashSet = new HashSet<Type>();
-                    __discriminators.Add(discriminator, hashSet);
-                }
+            var hashSet = __discriminators.GetOrAdd(discriminator, d => new HashSet<Type>());
 
-                if (!hashSet.Contains(type))
-                {
-                    hashSet.Add(type);
-
-                    // mark all base types as discriminated (so we know that it's worth reading a discriminator)
-                    for (var baseType = type.GetTypeInfo().BaseType; baseType != null; baseType = baseType.GetTypeInfo().BaseType)
-                    {
-                        __discriminatedTypes.Add(baseType);
-                    }
-                }
-            }
-            finally
+            if (hashSet.Add(type))
             {
-                __configLock.ExitWriteLock();
+                // mark all base types as discriminated (so we know that it's worth reading a discriminator)
+                for (var baseType = typeInfo.BaseType; baseType != null; baseType = baseType.GetTypeInfo().BaseType)
+                {
+                    __discriminatedTypes.AddOrUpdate(baseType, baseType, (t, b) => t);
+                }
             }
         }
 
@@ -552,22 +478,12 @@ namespace MongoDB.Bson.Serialization
         /// <param name="convention">The discriminator convention.</param>
         public static void RegisterDiscriminatorConvention(Type type, IDiscriminatorConvention convention)
         {
-            __configLock.EnterWriteLock();
-            try
+            var conventionExisting = __discriminatorConventions.GetOrAdd(type, convention);
+
+            if (conventionExisting != convention)
             {
-                if (!__discriminatorConventions.ContainsKey(type))
-                {
-                    __discriminatorConventions.Add(type, convention);
-                }
-                else
-                {
-                    var message = string.Format("There is already a discriminator convention registered for type {0}.", type.FullName);
-                    throw new BsonSerializationException(message);
-                }
-            }
-            finally
-            {
-                __configLock.ExitWriteLock();
+                var message = string.Format("There is already a discriminator convention registered for type {0}.", type.FullName);
+                throw new BsonSerializationException(message);
             }
         }
 
@@ -590,15 +506,7 @@ namespace MongoDB.Bson.Serialization
         /// <param name="idGenerator">The IdGenerator for the Id Type.</param>
         public static void RegisterIdGenerator(Type type, IIdGenerator idGenerator)
         {
-            __configLock.EnterWriteLock();
-            try
-            {
-                __idGenerators[type] = idGenerator;
-            }
-            finally
-            {
-                __configLock.ExitWriteLock();
-            }
+            __idGenerators[type] = idGenerator;
         }
 
         /// <summary>
@@ -674,51 +582,26 @@ namespace MongoDB.Bson.Serialization
         // internal static methods
         internal static void EnsureKnownTypesAreRegistered(Type nominalType)
         {
-            __configLock.EnterReadLock();
-            try
-            {
-                if (__typesWithRegisteredKnownTypes.Contains(nominalType))
-                {
-                    return;
-                }
-            }
-            finally
-            {
-                __configLock.ExitReadLock();
-            }
-
-            __configLock.EnterWriteLock();
-            try
-            {
-                if (!__typesWithRegisteredKnownTypes.Contains(nominalType))
-                {
-                    // only call LookupClassMap for classes with a BsonKnownTypesAttribute
+            __typesWithRegisteredKnownTypes.GetOrAdd(nominalType, type =>
+           {
+                // only call LookupClassMap for classes with a BsonKnownTypesAttribute
 #if NET452
-                    var knownTypesAttribute = nominalType.GetTypeInfo().GetCustomAttributes(typeof(BsonKnownTypesAttribute), false);
+                var knownTypesAttribute = nominalType.GetTypeInfo().GetCustomAttributes(typeof(BsonKnownTypesAttribute), false);
 #else
-                    var knownTypesAttribute = nominalType.GetTypeInfo().GetCustomAttributes(typeof(BsonKnownTypesAttribute), false).ToArray();
+                var knownTypesAttribute = nominalType.GetTypeInfo().GetCustomAttributes(typeof(BsonKnownTypesAttribute), false).ToArray();
 #endif
-                    if (knownTypesAttribute != null && knownTypesAttribute.Length > 0)
-                    {
-                        // try and force a scan of the known types
-                        LookupSerializer(nominalType);
-                    }
-
-                    __typesWithRegisteredKnownTypes.Add(nominalType);
-                }
-            }
-            finally
-            {
-                __configLock.ExitWriteLock();
-            }
+                if (knownTypesAttribute?.Length > 0)
+               {
+                    // try and force a scan of the known types
+                    LookupSerializer(type);
+               }
+               return type;
+           });
         }
 
         // private static methods
-        private static void CreateSerializerRegistry()
+        private static void RegisterSerializationProviders()
         {
-            __serializerRegistry = new BsonSerializerRegistry();
-            __typeMappingSerializationProvider = new TypeMappingSerializationProvider();
-
             // order matters. It's in reverse order of how they'll get consumed
             __serializerRegistry.RegisterSerializationProvider(new BsonClassMapSerializationProvider());
             __serializerRegistry.RegisterSerializationProvider(new DiscriminatedInterfaceSerializationProvider());
