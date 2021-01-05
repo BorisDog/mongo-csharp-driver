@@ -72,6 +72,8 @@ namespace MongoDB.Bson.IO
         private BsonValue _currentValue;
         private JsonToken _pushedToken;
 
+        private readonly List<JsonReaderBookmark> _bookmarks = new List<JsonReaderBookmark>();
+
         // constructors
         /// <summary>
         /// Initializes a new instance of the JsonReader class.
@@ -107,7 +109,7 @@ namespace MongoDB.Bson.IO
         /// <param name="textReader">The TextReader.</param>
         /// <param name="settings">The reader settings.</param>
         public JsonReader(TextReader textReader, JsonReaderSettings settings)
-            : this(new JsonBuffer(textReader), settings)
+            : this(new JsonBuffer(textReader, settings.ReadChunkSize, settings.MinResetBufferSize), settings)
         {
         }
 
@@ -135,7 +137,10 @@ namespace MongoDB.Bson.IO
         /// <returns>A bookmark.</returns>
         public override BsonReaderBookmark GetBookmark()
         {
-            return new JsonReaderBookmark(State, CurrentBsonType, CurrentName, _context, _currentToken, _currentValue, _pushedToken, _buffer.Position);
+            var bookmark = new JsonReaderBookmark(State, CurrentBsonType, CurrentName, _context, _currentToken, _currentValue, _pushedToken, _buffer.Position);
+            _bookmarks.Add(bookmark);
+
+            return bookmark;
         }
 
         /// <summary>
@@ -399,6 +404,12 @@ namespace MongoDB.Bson.IO
                     State = BsonReaderState.Value;
                     break;
             }
+
+            if (_jsonReaderSettings.AutoBufferReset && _bookmarks.Count == 0)
+            {
+                _buffer.ResetBuffer();
+            }
+
             return CurrentBsonType;
         }
 
@@ -749,6 +760,7 @@ namespace MongoDB.Bson.IO
         public override void ReturnToBookmark(BsonReaderBookmark bookmark)
         {
             if (Disposed) { ThrowObjectDisposedException(); }
+
             var jsonReaderBookmark = (JsonReaderBookmark)bookmark;
             State = jsonReaderBookmark.State;
             CurrentBsonType = jsonReaderBookmark.CurrentBsonType;
@@ -758,6 +770,9 @@ namespace MongoDB.Bson.IO
             _currentValue = jsonReaderBookmark.CurrentValue;
             _pushedToken = jsonReaderBookmark.PushedToken;
             _buffer.Position = jsonReaderBookmark.Position;
+
+            // TODO BD throw if not found?
+            _bookmarks.Remove(jsonReaderBookmark);
         }
 
         /// <summary>

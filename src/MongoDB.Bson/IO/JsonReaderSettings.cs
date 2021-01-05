@@ -28,6 +28,21 @@ namespace MongoDB.Bson.IO
         // private static fields
         private static JsonReaderSettings __defaults = null; // delay creation to pick up the latest default values
 
+        /// <summary>
+        /// TODO BD
+        /// </summary>
+        public bool AutoBufferReset { get; set; } = true;
+
+        /// <summary>
+        /// TODO BD
+        /// </summary>
+        public int ReadChunkSize { get; set; } = 2048;
+
+        /// <summary>
+        /// TODO BD
+        /// </summary>
+        public int MinResetBufferSize { get; set; } = 512;
+
         // constructors
         /// <summary>
         /// Initializes a new instance of the JsonReaderSettings class.

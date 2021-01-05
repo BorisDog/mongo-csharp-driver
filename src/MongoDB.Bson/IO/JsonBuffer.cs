@@ -25,6 +25,8 @@ namespace MongoDB.Bson.IO
     internal class JsonBuffer
     {
         // private fields
+        private readonly int _readChunkSize;
+        private readonly int _minDiscardBufferSize;
         private readonly StringBuilder _buffer;
         private int _position;
         private readonly TextReader _reader;
@@ -43,11 +45,11 @@ namespace MongoDB.Bson.IO
             _buffer = new StringBuilder(json);
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JsonBuffer" /> class.
-        /// </summary>
+        /// <summary>Initializes a new instance of the <see cref="JsonBuffer" /> class.</summary>
         /// <param name="reader">The reader.</param>
-        public JsonBuffer(TextReader reader)
+        /// <param name="readChunkSize"></param>
+        /// <param name="minResetBufferSize"></param>
+        public JsonBuffer(TextReader reader, int readChunkSize, int minResetBufferSize)
         {
             if (reader == null)
             {
@@ -55,6 +57,10 @@ namespace MongoDB.Bson.IO
             }
             _buffer = new StringBuilder(256); // start out with a reasonable initial capacity
             _reader = reader;
+
+            // TODO BD validation
+            _readChunkSize = readChunkSize;
+            _minDiscardBufferSize = minResetBufferSize;
         }
 
         // public properties
@@ -146,8 +152,7 @@ namespace MongoDB.Bson.IO
         public void ResetBuffer()
         {
             // only trim the buffer if enough space will be reclaimed to make it worthwhile
-            var minimumTrimCount = 256; // TODO: make configurable?
-            if (_position >= minimumTrimCount)
+            if (_position >= _minDiscardBufferSize)
             {
                 _buffer.Remove(0, _position);
                 _position = 0;
@@ -189,9 +194,8 @@ namespace MongoDB.Bson.IO
             {
                 if (_reader != null)
                 {
-                    var blockSize = 1024; // TODO: make configurable?
-                    var block = new char[blockSize];
-                    var actualCount = _reader.ReadBlock(block, 0, blockSize);
+                    var block = new char[_readChunkSize];
+                    var actualCount = _reader.ReadBlock(block, 0, _readChunkSize);
 
                     if (actualCount > 0)
                     {
