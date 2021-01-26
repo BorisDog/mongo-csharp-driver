@@ -125,6 +125,7 @@ if [[ "$OS" =~ Windows|windows ]]; then
       '$env:MONGO_X509_CLIENT_CERTIFICATE_PASSWORD="'${MONGO_X509_CLIENT_CERTIFICATE_PASSWORD}'";'\
       '.\build.ps1 -target' $TARGET
   fi
+  powershell.exe 'get-process'
 else
   if [[ -z "$MONGO_X509_CLIENT_CERTIFICATE_PATH" && -z "$MONGO_X509_CLIENT_CERTIFICATE_PASSWORD" ]]; then
     ./build.sh -target=$TARGET
