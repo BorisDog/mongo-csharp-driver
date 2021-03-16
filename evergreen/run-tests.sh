@@ -117,6 +117,7 @@ fi
 
 if [[ "$OS" =~ Windows|windows ]]; then
   export DRIVERS_TOOLS=$(cygpath -m $DRIVERS_TOOLS)
+  powershell.exe 'get-process'
   if [[ -z "$MONGO_X509_CLIENT_CERTIFICATE_PATH" && -z "$MONGO_X509_CLIENT_CERTIFICATE_PASSWORD" ]]; then
     powershell.exe '.\build.ps1 -target' $TARGET
   else
@@ -126,6 +127,8 @@ if [[ "$OS" =~ Windows|windows ]]; then
       '.\build.ps1 -target' $TARGET
   fi
   powershell.exe 'get-process'
+  powershell.exe 'stop-process -name mongocryptd -ErrorAction SilentlyContinue'
+  powershell.exe 'get-process'  
 else
   if [[ -z "$MONGO_X509_CLIENT_CERTIFICATE_PATH" && -z "$MONGO_X509_CLIENT_CERTIFICATE_PASSWORD" ]]; then
     ./build.sh -target=$TARGET

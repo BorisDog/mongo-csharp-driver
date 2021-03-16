@@ -248,7 +248,7 @@ functions:
       params:
         working_dir: mongo-csharp-driver
         script: |
-          set +x
+          set -x
           export FLE_AWS_ACCESS_KEY_ID=${FLE_AWS_ACCESS_KEY_ID}
           export FLE_AWS_SECRET_ACCESS_KEY=${FLE_AWS_SECRET_ACCESS_KEY}
           export FLE_AZURE_TENANT_ID=${FLE_AZURE_TENANT_ID}
