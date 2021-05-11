@@ -44,6 +44,7 @@ namespace MongoDB.Driver.Core.Operations
             try
             {
                 context.Initialize(cancellationToken);
+                context.PinChannelIfNeeded();
 
                 ChannelPinningHelper.PinChannellIfRequired(
                     context.ChannelSource,
@@ -72,6 +73,7 @@ namespace MongoDB.Driver.Core.Operations
             try
             {
                 await context.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                context.PinChannelIfNeeded();
 
                 ChannelPinningHelper.PinChannellIfRequired(
                     context.ChannelSource,
@@ -80,6 +82,7 @@ namespace MongoDB.Driver.Core.Operations
 
                 return context;
             }
+
             catch
             {
                 context.Dispose();
@@ -149,7 +152,8 @@ namespace MongoDB.Driver.Core.Operations
         {
             if (_retryRequested)
             {
-                if (requests.Any(r => !r.IsRetryable(_channel.ConnectionDescription)))
+                // channel is not initialized yet, therefore passing connectionDescription:null.
+                if (requests.Any(r => !r.IsRetryable(connectionDescription: null)))
                 {
                     _retryRequested = false;
                 }
@@ -195,13 +199,62 @@ namespace MongoDB.Driver.Core.Operations
         private void Initialize(CancellationToken cancellationToken)
         {
             _channelSource = _binding.GetWriteChannelSource(cancellationToken);
-            _channel = _channelSource.GetChannel(cancellationToken);
+            var serverDescription = _channelSource.ServerDescription;
+
+            try
+            {
+                _channel = _channelSource.GetChannel(cancellationToken);
+            }
+            catch (MongoConnectionPoolPausedException)
+            {
+                if (RetryableWriteOperationExecutor.ShouldConnectionAcquireBeRetried(this, serverDescription))
+                {
+                    ReplaceChannelSource(_binding.GetWriteChannelSource(cancellationToken));
+                    ReplaceChannel(_channelSource.GetChannel(cancellationToken));
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
 
         private async Task InitializeAsync(CancellationToken cancellationToken)
         {
             _channelSource = await _binding.GetWriteChannelSourceAsync(cancellationToken).ConfigureAwait(false);
-            _channel = await _channelSource.GetChannelAsync(cancellationToken).ConfigureAwait(false);
+            var serverDescription = _channelSource.ServerDescription;
+
+            try
+            {
+                _channel = await _channelSource.GetChannelAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (MongoConnectionPoolPausedException)
+            {
+                if (RetryableWriteOperationExecutor.ShouldConnectionAcquireBeRetried(this, serverDescription))
+                {
+                    ReplaceChannelSource(await _binding.GetWriteChannelSourceAsync(cancellationToken).ConfigureAwait(false));
+                    ReplaceChannel(await _channelSource.GetChannelAsync(cancellationToken).ConfigureAwait(false));
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        private void PinChannelIfNeeded()
+        {
+            if (Binding.Session.IsInTransaction &&
+                ChannelPinningHelper.PinChannelSourceAndChannelIfRequired(
+                    ChannelSource,
+                    Channel,
+                    Binding.Session,
+                    out var pinnedChannelSource,
+                    out var pinnedChannel))
+            {
+                ReplaceChannelSource(pinnedChannelSource);
+                ReplaceChannel(pinnedChannel);
+            }
         }
     }
 }
