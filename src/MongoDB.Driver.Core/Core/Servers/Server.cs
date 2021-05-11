@@ -70,7 +70,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly InterlockedInt32 _state;
         private readonly ServerApi _serverApi;
 
-        private int _outstandingOperationsCount;
+        public int _outstandingOperationsCount;
 
         private readonly Action<ServerOpeningEvent> _openingEventHandler;
         private readonly Action<ServerOpenedEvent> _openedEventHandler;

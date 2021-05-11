@@ -149,7 +149,9 @@ Task("Test")
             NoBuild = true,
             NoRestore = true,
             Configuration = configuration,
-            ArgumentCustomization = args => args.Append("-- RunConfiguration.TargetPlatform=x64")
+            Verbosity = DotNetCoreVerbosity.Diagnostic,
+            ArgumentCustomization = args => args.Append("-- RunConfiguration.TargetPlatform=x64"),
+            Filter = "Category=\"LoadbalancingTests\""
         };
         switch (target.ToLowerInvariant())
         {

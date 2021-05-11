@@ -572,7 +572,7 @@ namespace MongoDB.Driver.Core.Clusters
                     allSelectors.Add(settings.PostServerSelector);
                 }
 
-                allSelectors.Add(_cluster._latencyLimitingServerSelector);
+                //allSelectors.Add(_cluster._latencyLimitingServerSelector);
                 allSelectors.Add(_operationCountServerSelector);
 
                 return new CompositeServerSelector(allSelectors);
