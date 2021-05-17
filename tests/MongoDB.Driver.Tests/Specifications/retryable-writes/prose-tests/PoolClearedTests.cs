@@ -110,7 +110,7 @@ namespace MongoDB.Driver.Tests.Specifications.retryable_writes.prose_tests
             var clonedClientSettings = DriverTestConfiguration.Client.Settings.Clone();
             clonedClientSettings.HeartbeatInterval = TimeSpan.FromMilliseconds(100);
             clonedClientSettings.MaxConnectionPoolSize = 1;
-            clonedClientSettings.RetryReads = true;
+            clonedClientSettings.RetryWrites = true;
             clonedClientSettings.ClusterConfigurator = builder => builder.Subscribe(eventCapturer);
             clonedClientSettings.Servers = new[] { clonedClientSettings.Servers.First() };
 
