@@ -277,11 +277,6 @@ namespace MongoDB.Driver.Specifications.connection_monitoring_and_pooling
             {
                 throw new Exception($"Missing event: {expectedEvents[actualEvents.Count]}.");
             }
-
-            if (actualEvents.Count > expectedEvents.Count)
-            {
-                throw new Exception($"Unexpected event of type: {actualEvents[expectedEvents.Count].GetType().Name}.");
-            }
         }
 
         private void CheckServerRequirements(BsonDocument document)
