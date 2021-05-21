@@ -29,6 +29,7 @@ using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
+using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.TestHelpers;
 using Xunit;
@@ -74,8 +75,9 @@ namespace MongoDB.Driver.Tests
 
             string applicationName = $"loadBalancingTest_async_{async}_{index}";
             const int threadsCount = 10;
-            const int commandsPerThreadCount = 10;
-            //const double maxCommandsOnSlowServerRatio = 0.3; // temporary set slow server load to 30% from 25% until find timings are investigated
+            const int commandsPerThreadCountFail = 10;
+            const int commandsPerThreadCountNormal = 100;
+            const double maxCommandsOnSlowServerRatio = 0.3; // temporary set slow server load to 30% from 25% until find timings are investigated
             const double operationsCountTolerance = 0.15;
 
             var failCommand = BsonDocument.Parse($"{{ configureFailPoint: 'failCommand', mode : {{ times : 10000 }}, data : {{ failCommands : [\"find\"], blockConnection: true, blockTimeMS: 500, appName: '{applicationName}' }} }}");
@@ -87,7 +89,7 @@ namespace MongoDB.Driver.Tests
                 var slowServer = client.Cluster.SelectServer(WritableServerSelector.Instance, default);
                 var fastServer = client.Cluster.SelectServer(new DelegateServerSelector((_, servers) => servers.Where(s => s.ServerId != slowServer.ServerId)), default);
 
-                //using var failPoint = FailPoint.Configure(slowServer, NoCoreSession.NewHandle(), failCommand);
+                using var failPoint = FailPoint.Configure(slowServer, NoCoreSession.NewHandle(), failCommand);
 
                 var database = client.GetDatabase(_databaseName);
                 CreateCollection();
@@ -106,19 +108,19 @@ namespace MongoDB.Driver.Tests
                     channel.Dispose();
                 }
 
-                //var (allCount, eventsOnSlowServerCount) = ExecuteFindOperations(collection, slowServer.ServerId);
-                //eventsOnSlowServerCount.Should().BeLessThan((int)(allCount * maxCommandsOnSlowServerRatio));
+                var (allCount, eventsOnSlowServerCount) = ExecuteFindOperations(collection, slowServer.ServerId, commandsPerThreadCountFail);
+                eventsOnSlowServerCount.Should().BeLessThan((int)(allCount * maxCommandsOnSlowServerRatio));
 
-                //failPoint.Dispose();
+                failPoint.Dispose();
 
-                var (allCount, eventsOnSlowServerCount) = ExecuteFindOperations(collection, slowServer.ServerId);
+                (allCount, eventsOnSlowServerCount) = ExecuteFindOperations(collection, slowServer.ServerId, commandsPerThreadCountNormal);
 
                 var singleServerOperationsPortion = allCount / 2;
                 var singleServerOperationsRange = (int)Math.Ceiling(allCount * operationsCountTolerance);
 
                 var events2 = eventCapturer.Events
-                 .OfType<CommandSucceededEvent>()
-                 .ToArray();
+                    .OfType<CommandSucceededEvent>()
+                    .ToArray();
 
                 foreach (var g in events2.GroupBy(e => e.ConnectionId.ServerId))
                 {
@@ -136,13 +138,13 @@ namespace MongoDB.Driver.Tests
                 eventsOnSlowServerCount.Should().BeInRange(singleServerOperationsPortion - singleServerOperationsRange, singleServerOperationsPortion + singleServerOperationsRange);
             }
 
-            (int allCount, int slowServerCount) ExecuteFindOperations(IMongoCollection<BsonDocument> collection, ServerId serverId)
+            (int allCount, int slowServerCount) ExecuteFindOperations(IMongoCollection<BsonDocument> collection, ServerId serverId, int operationCount)
             {
                 eventCapturer.Clear();
 
                 ThreadingUtilities.ExecuteOnNewThreads(threadsCount, __ =>
                 {
-                    for (int i = 0; i < commandsPerThreadCount; i++)
+                    for (int i = 0; i < operationCount; i++)
                     {
                         if (async)
                         {
