@@ -59,6 +59,14 @@ namespace MongoDB.Driver.Core.Bindings
         bool IsCausallyConsistent { get; }
 
         /// <summary>
+        /// Gets a value indicate whether this instance is causally consistent.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if the session is causally consistent.
+        /// </value>
+        bool IsSnapshot { get; }
+
+        /// <summary>
         /// Gets a value indicate whether this session is dirty.
         /// </summary>
         /// <value>
@@ -89,6 +97,14 @@ namespace MongoDB.Driver.Core.Bindings
         /// The operation time.
         /// </value>
         BsonTimestamp OperationTime { get; }
+
+        /// <summary>
+        /// Gets the snapshot cluster time.
+        /// </summary>
+        /// <value>
+        /// The snapshot cluster time.
+        /// </value>
+        BsonTimestamp SnapshotClusterTime { get; set; }
 
         /// <summary>
         /// Gets the session options.

@@ -15,7 +15,6 @@
 
 using System;
 using MongoDB.Bson;
-using MongoDB.Driver.Core.Misc;
 using MongoDB.Shared;
 
 namespace MongoDB.Driver
@@ -23,7 +22,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a read concern.
     /// </summary>
-    public sealed class ReadConcern : IEquatable<ReadConcern>, IConvertibleToBsonDocument
+    public class ReadConcern : IEquatable<ReadConcern>, IConvertibleToBsonDocument
     {
         private static readonly ReadConcern __available = new ReadConcern(ReadConcernLevel.Available);
         private static readonly ReadConcern __default = new ReadConcern();
@@ -70,6 +69,12 @@ namespace MongoDB.Driver
         public static ReadConcern FromBsonDocument(BsonDocument document)
         {
             var readConcern = ReadConcern.Default;
+            BsonTimestamp atClusterTime = null;
+
+            if (document.TryGetValue("atClusterTime", out var atClusterTimeValue))
+            {
+                atClusterTime = atClusterTimeValue.AsBsonTimestamp;
+            }
 
             BsonValue levelValue;
             if (document.TryGetValue("level", out levelValue))
@@ -86,7 +91,7 @@ namespace MongoDB.Driver
                     case ReadConcernLevel.Majority:
                         return ReadConcern.Majority;
                     case ReadConcernLevel.Snapshot:
-                        return ReadConcern.Snapshot;
+                        return atClusterTime != null ? ReadConcern.SnapshotAtClusterTime(atClusterTime) : ReadConcern.Snapshot;
                     default:
                         throw new NotSupportedException($"The level {level} is not supported.");
                 }
@@ -96,14 +101,25 @@ namespace MongoDB.Driver
         }
 
         private readonly ReadConcernLevel? _level;
+        private readonly BsonTimestamp _atClusterTime;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReadConcern" /> class.
         /// </summary>
         /// <param name="level">The level.</param>
-        public ReadConcern(Optional<ReadConcernLevel?> level = default(Optional<ReadConcernLevel?>))
+        /// <param name="atClusterTime">At cluster time.</param>
+        public ReadConcern(Optional<ReadConcernLevel?> level = default(Optional<ReadConcernLevel?>),
+                           Optional<BsonTimestamp> atClusterTime = default(Optional<BsonTimestamp>))
         {
             _level = level.WithDefault(null);
+
+            var clusterTime = atClusterTime.WithDefault(null);
+            if (clusterTime != null && _level != ReadConcernLevel.Snapshot)
+            {
+                throw new ArgumentException($"{nameof(atClusterTime)} is supported only with read concern snapshot.");
+            }
+
+            _atClusterTime = clusterTime;
         }
 
         /// <summary>
@@ -152,6 +168,12 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets a snapshot read concern with cluster time.
+        /// </summary>
+        public static ReadConcern SnapshotAtClusterTime(BsonTimestamp atClusterTime) =>
+            new ReadConcern(ReadConcernLevel.Snapshot, atClusterTime);
+
+        /// <summary>
         /// Converts this read concern to a BsonDocument suitable to be sent to the server.
         /// </summary>
         /// <returns>
@@ -184,7 +206,8 @@ namespace MongoDB.Driver
 
             return new BsonDocument
             {
-                { "level", () => level, level != null }
+                { "level", () => level, level != null },
+                { "atClusterTime", () => _atClusterTime, _atClusterTime != null }
             };
         }
 

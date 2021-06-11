@@ -160,6 +160,22 @@ namespace MongoDB.Driver.Core.Bindings
             }
         }
 
+        /// <summary>
+        /// Gets a value indicate whether this instance is causally consistent.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if the session is causally consistent.
+        /// </value>
+        public bool IsSnapshot => _wrapped.IsSnapshot;
+
+        /// <summary>
+        /// Gets the snapshot cluster time.
+        /// </summary>
+        /// <value>
+        /// The snapshot cluster time.
+        /// </value>
+        public BsonTimestamp SnapshotClusterTime { get => _wrapped.SnapshotClusterTime; set => _wrapped.SnapshotClusterTime = value; }
+
         // public methods
         /// <inheritdoc />
         public virtual void AbortTransaction(CancellationToken cancellationToken = default(CancellationToken))

@@ -25,12 +25,15 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         private readonly IMongoCollection<BsonDocument> _collection;
         private readonly FilterDefinition<BsonDocument> _filter;
         private readonly FindOptions<BsonDocument> _options;
+        private readonly UnifiedEntityMap _entityMap;
 
         public UnifiedFindOperation(
+            UnifiedEntityMap entityMap,
             IMongoCollection<BsonDocument> collection,
             FilterDefinition<BsonDocument> filter,
             FindOptions<BsonDocument> options)
         {
+            _entityMap = entityMap;
             _collection = collection;
             _filter = filter;
             _options = options;
@@ -40,7 +43,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             try
             {
-                var cursor = _collection.FindSync(_filter, _options, cancellationToken);
+                using var cursor = _collection.FindSync(_filter, _options, cancellationToken);
                 var result = cursor.ToList();
 
                 return OperationResult.FromResult(new BsonArray(result));
@@ -102,12 +105,29 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         options = options ?? new FindOptions<BsonDocument>();
                         options.Sort = new BsonDocumentSortDefinition<BsonDocument>(argument.Value.AsBsonDocument);
                         break;
+                    case "readConcern":
+                        var readConcernDocument = argument.Value.AsBsonDocument.DeepClone().AsBsonDocument;
+
+                        if (readConcernDocument.TryGetValue("clusterTime", out var clusterTimeLong))
+                        {
+                            var clusterTimestamp = new BsonTimestamp(clusterTimeLong.ToInt64());
+                            readConcernDocument.Add("atClusterTime", clusterTimestamp);
+                        }
+                        else if (readConcernDocument.TryGetValue("cursorClusterTime", out var cursorClusterTime))
+                        {
+                            var clusterTimestamp = _entityMap._cursors[cursorClusterTime.AsString];
+                            readConcernDocument.Add("atClusterTime", clusterTimestamp.ClusterTime);
+                        }
+                        var readConcern = ReadConcern.FromBsonDocument(readConcernDocument);
+
+                        collection = collection.WithReadConcern(readConcern).WithReadPreference(ReadPreference.Secondary);
+                        break;
                     default:
                         throw new FormatException($"Invalid FindOperation argument name: '{argument.Name}'.");
                 }
             }
 
-            return new UnifiedFindOperation(collection, filter, options);
+            return new UnifiedFindOperation(_entityMap, collection, filter, options);
         }
     }
 }

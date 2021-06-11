@@ -172,6 +172,7 @@ namespace MongoDB.Driver.Core.Operations
                 cursorDocument["id"].ToInt64(),
                 0,
                 0,
+                null,
                 BsonDocumentSerializer.Instance,
                 _messageEncoderSettings);
 

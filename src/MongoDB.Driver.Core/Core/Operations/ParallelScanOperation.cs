@@ -186,6 +186,7 @@ namespace MongoDB.Driver.Core.Operations
                         cursorId,
                         _batchSize ?? 0,
                         0, // limit
+                        null, // atClusterTime
                         _serializer,
                         _messageEncoderSettings);
 

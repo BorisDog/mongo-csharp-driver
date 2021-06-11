@@ -1,4 +1,4 @@
-﻿/* Copyright 2021-present MongoDB Inc.
+﻿/* Copyright 2020-present MongoDB Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -20,30 +20,32 @@ using MongoDB.Bson;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
 {
-    public class UnifiedDistinctOperation : IUnifiedEntityTestOperation
+    public class UnifiedCreateFindCursorOperation : IUnifiedEntityTestOperation
     {
         private readonly IMongoCollection<BsonDocument> _collection;
-        private readonly string _fieldName;
         private readonly FilterDefinition<BsonDocument> _filter;
+        private readonly FindOptions<BsonDocument> _options;
+        private readonly UnifiedEntityMap _entityMap;
 
-        public UnifiedDistinctOperation(
+        public UnifiedCreateFindCursorOperation(
+            UnifiedEntityMap entityMap,
             IMongoCollection<BsonDocument> collection,
-            string fieldName,
-            FilterDefinition<BsonDocument> filter)
+            FilterDefinition<BsonDocument> filter,
+            FindOptions<BsonDocument> options)
         {
+            _entityMap = entityMap;
             _collection = collection;
-            _fieldName = fieldName;
             _filter = filter;
+            _options = options;
         }
 
         public OperationResult Execute(CancellationToken cancellationToken)
         {
             try
             {
-                var cursor = _collection.Distinct<BsonValue>(_fieldName, _filter, cancellationToken: cancellationToken);
-                var result = cursor.ToList();
+                var cursor = _collection.FindSync(_filter, _options, cancellationToken);
 
-                return OperationResult.FromResult(new BsonArray(result));
+                return OperationResult.FromCursor(cursor);
             }
             catch (Exception exception)
             {
@@ -55,10 +57,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             try
             {
-                var cursor = await _collection.DistinctAsync<BsonValue>(_fieldName, _filter, cancellationToken: cancellationToken);
-                var result = cursor.ToList();
+                var cursor = await _collection.FindAsync(_filter, _options, cancellationToken);
 
-                return OperationResult.FromResult(new BsonArray(result));
+                return OperationResult.FromCursor(cursor);
             }
             catch (Exception exception)
             {
@@ -67,50 +68,52 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         }
     }
 
-    public class UnifiedDistinctOperationBuilder
+    public class UnifiedCreateFindCursorOperationBuilder
     {
         private readonly UnifiedEntityMap _entityMap;
 
-        public UnifiedDistinctOperationBuilder(UnifiedEntityMap entityMap)
+        public UnifiedCreateFindCursorOperationBuilder(UnifiedEntityMap entityMap)
         {
             _entityMap = entityMap;
         }
 
-        public UnifiedDistinctOperation Build(string targetCollectionId, BsonDocument arguments)
+        public UnifiedCreateFindCursorOperation Build(string targetCollectionId, BsonDocument arguments)
         {
             var collection = _entityMap.GetCollection(targetCollectionId);
 
-            string fieldName = null;
             FilterDefinition<BsonDocument> filter = null;
+            FindOptions<BsonDocument> options = null;
 
             foreach (var argument in arguments)
             {
                 switch (argument.Name)
                 {
-                    case "fieldName":
-                        fieldName = argument.Value.AsString;
+                    case "batchSize":
+                        options = options ?? new FindOptions<BsonDocument>();
+                        options.BatchSize = argument.Value.AsInt32;
                         break;
                     case "filter":
-                        filter = argument.Value.AsBsonDocument;
+                        filter = new BsonDocumentFilterDefinition<BsonDocument>(argument.Value.AsBsonDocument);
+                        break;
+                    case "limit":
+                        options = options ?? new FindOptions<BsonDocument>();
+                        options.Limit = argument.Value.AsInt32;
+                        break;
+                    case "sort":
+                        options = options ?? new FindOptions<BsonDocument>();
+                        options.Sort = new BsonDocumentSortDefinition<BsonDocument>(argument.Value.AsBsonDocument);
                         break;
                     case "readConcern":
-                        var readConcernDocument = argument.Value.AsBsonDocument.DeepClone().AsBsonDocument;
-
-                        if (readConcernDocument.TryGetValue("cursorClusterTime", out var cursorClusterTime))
-                        {
-                            var atClusterTime = _entityMap.Cursors[cursorClusterTime.AsString];
-                            readConcernDocument.Add("atClusterTime", atClusterTime.ClusterTime);
-                        }
-                        var readConcern = ReadConcern.FromBsonDocument(readConcernDocument);
+                        var readConcern = ReadConcern.FromBsonDocument(argument.Value.AsBsonDocument);
 
                         collection = collection.WithReadConcern(readConcern);
                         break;
                     default:
-                        throw new FormatException($"Invalid DistinctOperation argument name: '{argument.Name}'.");
+                        throw new FormatException($"Invalid FindOperation argument name: '{argument.Name}'.");
                 }
             }
 
-            return new UnifiedDistinctOperation(collection, fieldName, filter);
+            return new UnifiedCreateFindCursorOperation(_entityMap, collection, filter, options);
         }
     }
 }

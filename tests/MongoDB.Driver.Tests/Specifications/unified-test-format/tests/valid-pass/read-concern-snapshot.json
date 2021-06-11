@@ -1,0 +1,487 @@
+{
+  "description": "read-concern-snapshot",
+  "schemaVersion": "1.0",
+  "createEntities": [
+    {
+      "client": {
+        "id": "client0",
+        "observeEvents": [
+          "commandStartedEvent"
+        ]
+      }
+    },
+    {
+      "database": {
+        "id": "database0",
+        "client": "client0",
+        "databaseName": "database0"
+      }
+    },
+    {
+        "collection": {
+            "id": "collection0",
+            "database": "database0",
+            "collectionName": "collection0"
+        }
+    }],
+  "initialData": [
+    {
+      "collectionName": "collection0",
+      "databaseName": "database0",
+      "documents": [
+        {
+            "_id": 1,
+            "x": 11
+        },
+        {
+            "_id": 2,
+            "x": 11
+        },
+        {
+            "_id": 3,
+            "x": 11
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+        "description": "Find snapshot atClusterTime",
+        "operations": [
+            {
+                "name": "createFindCursor",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 1
+                    },
+                    "readConcern": {
+                        "level": "snapshot"
+                    }
+                },
+                "saveResultAsEntity": "cursor0"
+            },
+            {
+                "name": "findOneAndUpdate",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 1
+                    },
+                    "update": {
+                        "$inc": {
+                            "x": 1
+                        }
+                    },
+                    "returnDocument": "After"
+                },
+                "expectResult": {
+                    "_id": 1,
+                    "x": 12
+                }
+            },
+            {
+                "name": "createFindCursor",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 1
+                    },
+                    "readConcern": {
+                        "level": "snapshot"
+                    }
+                },
+                "saveResultAsEntity": "cursor1"
+            },
+            {
+                "name": "findOneAndUpdate",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 1
+                    },
+                    "update": {
+                        "$inc": {
+                            "x": 1
+                        }
+                    },
+                    "returnDocument": "After"
+                },
+                "expectResult": {
+                    "_id": 1,
+                    "x": 13
+                }
+            },
+            {
+                "name": "find",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 1
+                    },
+                    "readConcern": {
+                        "level": "snapshot",
+                        "cursorClusterTime": "cursor0"
+                    }
+                },
+                "expectResult": [
+                    {
+                        "_id": 1,
+                        "x": 11
+                    }
+                ]
+            },
+            {
+                "name": "find",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 1
+                    },
+                    "readConcern": {
+                        "level": "snapshot",
+                        "cursorClusterTime": "cursor1"
+                    }
+                },
+                "expectResult": [
+                    {
+                        "_id": 1,
+                        "x": 12
+                    }
+                ]
+            },
+            {
+                "name": "find",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 1
+                    }
+                },
+                "expectResult": [
+                    {
+                        "_id": 1,
+                        "x": 13
+                    }
+                ]
+            }
+        ],
+        "outcome": [
+        ]
+    },
+    {
+        "description": "Distinct snapshot atClusterTime",
+        "operations": [
+            {
+                "name": "createFindCursor",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 2
+                    },
+                    "readConcern": {
+                        "level": "snapshot"
+                    }
+                },
+                "saveResultAsEntity": "cursor0"
+            },
+            {
+                "name": "findOneAndUpdate",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 2
+                    },
+                    "update": {
+                        "$inc": {
+                            "x": 1
+                        }
+                    },
+                    "returnDocument": "After"
+                },
+                "expectResult": {
+                    "_id": 2,
+                    "x": 12
+                }
+            },
+            {
+                "name": "createFindCursor",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 2
+                    },
+                    "readConcern": {
+                        "level": "snapshot"
+                    }
+                },
+                "saveResultAsEntity": "cursor1"
+            },
+            {
+                "name": "findOneAndUpdate",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 2
+                    },
+                    "update": {
+                        "$inc": {
+                            "x": 1
+                        }
+                    },
+                    "returnDocument": "After"
+                },
+                "expectResult": {
+                    "_id": 2,
+                    "x": 13
+                }
+            },
+            {
+                "name": "distinct",
+                "object": "collection0",
+                "arguments": {
+                    "fieldName": "x",
+                    "filter": {
+                        "_id": {
+                            "$gt": 1
+                        }
+                    }
+                },
+                "expectResult": [
+                    11,
+                    13
+                ]
+            },
+            {
+                "name": "distinct",
+                "object": "collection0",
+                "arguments": {
+                    "fieldName": "x",
+                    "filter": {
+                        "_id": {
+                            "$gt": 1
+                        }
+                    },
+                    "readConcern": {
+                        "level": "snapshot",
+                        "cursorClusterTime": "cursor0"
+                    }
+                },
+                "expectResult": [
+                    11
+                ]
+            },
+            {
+                "name": "distinct",
+                "object": "collection0",
+                "arguments": {
+                    "fieldName": "x",
+                    "filter": {
+                        "_id": {
+                            "$gt": 1
+                        }
+                    },
+                    "readConcern": {
+                        "level": "snapshot",
+                        "cursorClusterTime": "cursor1"
+                    }
+                },
+                "expectResult": [
+                    11,
+                    13
+                ]
+            }
+        ],
+        "outcome": [
+        ]
+    },
+    {
+        "description": "Aggregate snapshot atClusterTime",
+        "operations": [
+            {
+                "name": "find",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 3
+                    },
+                    "cursorName": "cursor0",
+                    "readConcern": {
+                        "level": "snapshot"
+                    }
+                },
+                "expectResult": [
+                    {
+                        "_id": 3,
+                        "x": 11
+                    }
+                ]
+            },
+            {
+                "name": "findOneAndUpdate",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 3
+                    },
+                    "update": {
+                        "$inc": {
+                            "x": 1
+                        }
+                    },
+                    "returnDocument": "After"
+                },
+                "expectResult": {
+                    "_id": 3,
+                    "x": 12
+                }
+            },
+            {
+                "name": "find",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 3
+                    },
+                    "cursorName": "cursor1",
+                    "readConcern": {
+                        "level": "snapshot"
+                    }
+                },
+                "expectResult": [
+                    {
+                        "_id": 3,
+                        "x": 12
+                    }
+                ]
+            },
+            {
+                "name": "findOneAndUpdate",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 3
+                    },
+                    "update": {
+                        "$inc": {
+                            "x": 1
+                        }
+                    },
+                    "returnDocument": "After"
+                },
+                "expectResult": {
+                    "_id": 3,
+                    "x": 13
+                }
+            },
+            {
+                "name": "aggregate",
+                "object": "collection0",
+                "arguments": {
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "_id": 3
+                            }
+                        }
+                    ]
+                },
+                "expectResult": [
+                    {
+                        "_id": 3,
+                        "x": 13
+                    }
+                ]
+            },
+            {
+                "name": "aggregate",
+                "object": "collection0",
+                "arguments": {
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "_id": 3
+                            }
+                        }
+                    ],
+                    "readConcern": {
+                        "level": "snapshot",
+                        "cursorClusterTime": "cursor0"
+                    }
+                },
+                "expectResult": [
+                    {
+                        "_id": 3,
+                        "x": 11
+                    }
+                ]
+            },
+            {
+                "name": "aggregate",
+                "object": "collection0",
+                "arguments": {
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "_id": 3
+                            }
+                        }
+                    ],
+                    "readConcern": {
+                        "level": "snapshot",
+                        "cursorClusterTime": "cursor1"
+                    }
+                },
+                "expectResult": [
+                    {
+                        "_id": 3,
+                        "x": 12
+                    }
+                ]
+            }
+        ],
+        "outcome": [
+        ]
+    },
+    {
+        "description": "Snapshot error is not retried",
+        "operations": [
+            {
+                "name": "find",
+                "object": "collection0",
+                "arguments": {
+                    "filter": {
+                        "_id": 3
+                    },
+                    "readConcern": {
+                        "level": "snapshot",
+                        "clusterTime": 0
+                    }
+                },
+                "expectError": {
+                    "errorCode": 72
+                }
+            }
+        ],
+        "expectEvents": [
+            {
+                "client": "client0",
+                "events": [
+                    {
+                        "commandStartedEvent": {
+                            "command": {
+                                "find": "collection0",
+                                "filter": {
+                                    "_id": 3
+                                }
+                            },
+                            "commandName": "find",
+                            "databaseName": "database0"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+  ]
+}

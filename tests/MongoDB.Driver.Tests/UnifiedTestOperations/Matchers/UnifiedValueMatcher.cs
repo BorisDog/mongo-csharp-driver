@@ -34,7 +34,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
             _entityMap = entityMap;
         }
 
-        public void AssertValuesMatch(BsonValue actual, BsonValue expected)
+        public void AssertValuesMatch(BsonValue actual, BsonValue expected, string identifier = null)
         {
             try
             {
@@ -43,7 +43,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
             catch (XunitException exception)
             {
                 var jsonWriterSettings = new JsonWriterSettings { Indent = true };
-                var message =
+                var message = $"Operation {identifier}{Environment.NewLine}" +
                     $"Expected value to be: {expected?.ToJson(jsonWriterSettings)}{Environment.NewLine}" +
                     $"But found: {actual?.ToJson(jsonWriterSettings)}.";
                 throw new AssertionException(message, exception);

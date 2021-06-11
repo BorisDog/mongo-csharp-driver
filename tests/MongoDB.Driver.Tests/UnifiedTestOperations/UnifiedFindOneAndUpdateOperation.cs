@@ -33,7 +33,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             UpdateDefinition<BsonDocument> update,
             FindOneAndUpdateOptions<BsonDocument> options)
         {
-            _collection = collection;
+            _collection = collection.WithWriteConcern(WriteConcern.WMajority);
             _filter = filter;
             _update = update;
             _options = options;

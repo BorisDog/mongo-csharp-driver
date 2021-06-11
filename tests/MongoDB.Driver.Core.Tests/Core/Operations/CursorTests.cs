@@ -37,6 +37,7 @@ namespace MongoDB.Driver.Core.Operations
                 cursorId,
                 null, // batchSize
                 null, // limit
+                clusterTime: null,
                 BsonDocumentSerializer.Instance,
                 null); // messageEncoderSettings
 

@@ -48,6 +48,9 @@ namespace MongoDB.Driver.Core.Operations
         private readonly SemanticVersion _serverVersion;
 
         // public properties
+        /// <inheritdoc/>
+        public BsonTimestamp ClusterTime => _cursor.ClusterTime;
+
         /// <inheritdoc />
         public IEnumerable<TDocument> Current => _current;
 

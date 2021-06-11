@@ -42,6 +42,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         private readonly Dictionary<string, IClientSessionHandle> _sessions;
         private readonly Dictionary<string, BsonDocument> _sessionIds;
         private readonly Dictionary<string, long> _successCounts;
+        public readonly Dictionary<string, IAsyncCursor<BsonDocument>> _cursors;
 
         // public constructors
         public UnifiedEntityMap(
@@ -72,9 +73,20 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             _sessions = sessions;
             _sessionIds = sessionIds;
             _successCounts = successCounts;
+
+            _cursors = new Dictionary<string, IAsyncCursor<BsonDocument>>();
         }
 
         // public properties
+        public Dictionary<string, IAsyncCursor<BsonDocument>> Cursors
+        {
+            get
+            {
+                ThrowIfDisposed();
+                return _cursors;
+            }
+        }
+
         public Dictionary<string, BsonArray> ErrorDocuments
         {
             get
@@ -280,6 +292,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var sessions = new Dictionary<string, IClientSessionHandle>();
             var sessionIds = new Dictionary<string, BsonDocument>();
             var successCounts = new Dictionary<string, long>();
+            var cursors = new Dictionary<string, IAsyncCursor<BsonDocument>>();
 
             if (entitiesArray != null)
             {

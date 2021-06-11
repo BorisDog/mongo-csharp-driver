@@ -176,6 +176,8 @@ namespace MongoDB.Driver
                 }
             }
 
+            public BsonTimestamp ClusterTime => throw new NotImplementedException();
+
             public bool MoveNext(CancellationToken cancellationToken)
             {
                 if (_index >= _full.Count)

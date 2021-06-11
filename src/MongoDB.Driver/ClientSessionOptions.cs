@@ -30,6 +30,14 @@ namespace MongoDB.Driver
         public bool? CausalConsistency { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether this instance is snapshot.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is snapshot; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsSnapshot { get; set; }
+
+        /// <summary>
         /// Gets or sets the default transaction options.
         /// </summary>
         /// <value>
@@ -41,8 +49,9 @@ namespace MongoDB.Driver
         internal CoreSessionOptions ToCore(bool isImplicit = false)
         {
             return new CoreSessionOptions(
-                isCausallyConsistent: CausalConsistency ?? true,
+                isCausallyConsistent: CausalConsistency ?? !IsSnapshot,
                 isImplicit: isImplicit,
+                isSnapshot: IsSnapshot,
                 defaultTransactionOptions: DefaultTransactionOptions);
         }
     }

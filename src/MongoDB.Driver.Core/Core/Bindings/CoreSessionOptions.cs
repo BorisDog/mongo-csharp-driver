@@ -23,6 +23,7 @@ namespace MongoDB.Driver.Core.Bindings
         // private fields
         private readonly TransactionOptions _defaultTransactionOptions;
         private readonly bool _isCausallyConsistent;
+        private readonly bool _isSnapshot;
         private readonly bool _isImplicit;
 
         // constructors
@@ -30,14 +31,17 @@ namespace MongoDB.Driver.Core.Bindings
         /// Initializes a new instance of the <see cref="CoreSessionOptions" /> class.
         /// </summary>
         /// <param name="isCausallyConsistent">if set to <c>true</c> this session is causally consistent]</param>
+        /// <param name="isSnapshot">if set to <c>true</c> [is snapshot].</param>
         /// <param name="isImplicit">if set to <c>true</c> this session is an implicit session.</param>
         /// <param name="defaultTransactionOptions">The default transaction options.</param>
         public CoreSessionOptions(
             bool isCausallyConsistent = false,
+            bool isSnapshot = false,
             bool isImplicit = false,
             TransactionOptions defaultTransactionOptions = null)
         {
             _isCausallyConsistent = isCausallyConsistent;
+            _isSnapshot = isSnapshot;
             _isImplicit = isImplicit;
             _defaultTransactionOptions = defaultTransactionOptions;
         }
@@ -58,6 +62,14 @@ namespace MongoDB.Driver.Core.Bindings
         ///   <c>true</c> if this session is causally consistent; otherwise, <c>false</c>.
         /// </value>
         public bool IsCausallyConsistent => _isCausallyConsistent;
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is snapshot.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is snapshot; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsSnapshot => _isSnapshot;
 
         /// <summary>
         /// Gets a value indicating whether this session is an implicit session.

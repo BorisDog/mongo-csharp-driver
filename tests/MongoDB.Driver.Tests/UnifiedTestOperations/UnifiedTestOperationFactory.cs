@@ -125,6 +125,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedEstimatedDocumentCountOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "find":
                             return new UnifiedFindOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "createFindCursor":
+                            return new UnifiedCreateFindCursorOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "findOneAndDelete":
                             return new UnifiedFindOneAndDeleteOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "findOneAndReplace":

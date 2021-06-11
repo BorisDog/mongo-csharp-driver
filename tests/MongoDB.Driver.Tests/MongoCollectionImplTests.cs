@@ -73,6 +73,54 @@ namespace MongoDB.Driver
             subject.Settings.Should().NotBeNull();
         }
 
+        [Fact]
+        public void ReadTests()
+        {
+            object obj = null;
+            obj.Should().Be(null);
+
+            var client = DriverTestConfiguration.Client;
+            const string dbName = "readTests";
+            client.DropDatabase(dbName);
+            var database = DriverTestConfiguration.Client.GetDatabase(dbName);
+            var settings1 = new MongoCollectionSettings()
+            {
+                WriteConcern = WriteConcern.WMajority
+            };
+
+            var coll1 = database.GetCollection<BsonDocument>("Coll1", settings1);
+            coll1.InsertOne(new BsonDocument(new BsonElement("x", 213)));
+            coll1.InsertOne(new BsonDocument(new BsonElement("x", 212)));
+
+            var session = client.StartSession(new ClientSessionOptions() { IsSnapshot = true });
+            var cursor1 = coll1.Find(session, new BsonDocument()).ToCursor();
+            var all = cursor1.ToList();
+
+            var filter = Builders<BsonDocument>.Filter.Eq("x", 213);
+            var update = Builders<BsonDocument>.Update.Set("x", 3124);
+            coll1.UpdateOne(filter, update);
+
+            cursor1 = coll1.Find(session, new BsonDocument()).ToCursor();
+            all = cursor1.ToList();
+
+            cursor1 = coll1.Find(new BsonDocument()).ToCursor();
+            all = cursor1.ToList();
+
+            //var cursor1_1 = coll1.Find(new BsonDocument()).ToCursor();
+
+            //var pipeline = new EmptyPipelineDefinition<BsonDocument>()
+            //   .Match(Builders<BsonDocument>.Filter.Gt("x", 200));
+            //var pipelineResult = coll1.Aggregate<BsonDocument>(pipeline).ToList();
+
+            //all = cursor1_1.ToList();
+            //var t1 = coll1.Distinct<BsonValue>("x", "{ }");            
+            //var pipelineResult2 = coll2.Aggregate<BsonDocument>(pipeline).ToList();
+
+            //var coll3 = database.GetCollection<BsonDocument>("Coll1", settings1);
+            //var cursor3 = coll3.Find(new BsonDocument()).ToCursor();
+            //var all3 = cursor3.ToList();
+        }
+
         [Theory]
         [ParameterAttributeData]
         public void Aggregate_should_execute_an_AggregateOperation_when_out_is_not_specified(

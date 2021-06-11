@@ -389,7 +389,9 @@ namespace MongoDB.Driver
             options = options ?? new FindOptions<TDocument, TProjection>();
 
             var operation = CreateFindOperation<TProjection>(filter, options);
-            return ExecuteReadOperation(session, operation, cancellationToken);
+            var cursor = ExecuteReadOperation(session, operation, cancellationToken);
+
+            return cursor;
         }
 
         public override Task<IAsyncCursor<TProjection>> FindAsync<TProjection>(FilterDefinition<TDocument> filter, FindOptions<TDocument, TProjection> options, CancellationToken cancellationToken = default(CancellationToken))

@@ -50,6 +50,7 @@ namespace MongoDB.Driver.Core.Operations
         private readonly CollectionNamespace _collectionNamespace;
         private IChannelSource _channelSource;
         private bool _closed;
+        private readonly BsonTimestamp _clusterTime;
         private int _count;
         private IReadOnlyList<TDocument> _currentBatch;
         private long _cursorId;
@@ -66,7 +67,7 @@ namespace MongoDB.Driver.Core.Operations
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncCursor{TDocument}"/> class.
+        /// Initializes a new instance of the <see cref="AsyncCursor{TDocument}" /> class.
         /// </summary>
         /// <param name="channelSource">The channel source.</param>
         /// <param name="collectionNamespace">The collection namespace.</param>
@@ -75,6 +76,7 @@ namespace MongoDB.Driver.Core.Operations
         /// <param name="cursorId">The cursor identifier.</param>
         /// <param name="batchSize">The size of a batch.</param>
         /// <param name="limit">The limit.</param>
+        /// <param name="clusterTime">The cluster time.</param>
         /// <param name="serializer">The serializer.</param>
         /// <param name="messageEncoderSettings">The message encoder settings.</param>
         /// <param name="maxTime">The maxTime for each batch.</param>
@@ -86,6 +88,7 @@ namespace MongoDB.Driver.Core.Operations
             long cursorId,
             int? batchSize,
             int? limit,
+            BsonTimestamp clusterTime,
             IBsonSerializer<TDocument> serializer,
             MessageEncoderSettings messageEncoderSettings,
             TimeSpan? maxTime = null)
@@ -98,6 +101,7 @@ namespace MongoDB.Driver.Core.Operations
                 null, // postBatchResumeToken
                 batchSize,
                 limit,
+                clusterTime,
                 serializer,
                 messageEncoderSettings,
                 maxTime)
@@ -105,7 +109,7 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncCursor{TDocument}"/> class.
+        /// Initializes a new instance of the <see cref="AsyncCursor{TDocument}" /> class.
         /// </summary>
         /// <param name="channelSource">The channel source.</param>
         /// <param name="collectionNamespace">The collection namespace.</param>
@@ -115,6 +119,7 @@ namespace MongoDB.Driver.Core.Operations
         /// <param name="postBatchResumeToken">The post batch resume token.</param>
         /// <param name="batchSize">The size of a batch.</param>
         /// <param name="limit">The limit.</param>
+        /// <param name="clusterTime">The cluster time.</param>
         /// <param name="serializer">The serializer.</param>
         /// <param name="messageEncoderSettings">The message encoder settings.</param>
         /// <param name="maxTime">The maxTime for each batch.</param>
@@ -127,12 +132,14 @@ namespace MongoDB.Driver.Core.Operations
             BsonDocument postBatchResumeToken,
             int? batchSize,
             int? limit,
+            BsonTimestamp clusterTime,
             IBsonSerializer<TDocument> serializer,
             MessageEncoderSettings messageEncoderSettings,
             TimeSpan? maxTime)
         {
             _operationId = EventContext.OperationId;
             _channelSource = channelSource;
+            _clusterTime = clusterTime;
             _collectionNamespace = Ensure.IsNotNull(collectionNamespace, nameof(collectionNamespace));
             _query = Ensure.IsNotNull(query, nameof(query));
             _firstBatch = Ensure.IsNotNull(firstBatch, nameof(firstBatch));
@@ -155,6 +162,9 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // properties
+        /// <inheritdoc/>
+        public BsonTimestamp ClusterTime => _clusterTime;
+
         /// <inheritdoc/>
         public IEnumerable<TDocument> Current
         {

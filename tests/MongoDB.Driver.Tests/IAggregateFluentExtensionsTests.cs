@@ -671,6 +671,7 @@ namespace MongoDB.Driver.Tests
                 0,
                 null,
                 null,
+                null,
                 BsonSerializer.LookupSerializer<Person>(),
                 new MessageEncoderSettings(),
                 null);

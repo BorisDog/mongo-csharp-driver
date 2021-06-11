@@ -16,9 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver
@@ -46,6 +46,9 @@ namespace MongoDB.Driver
             _wrapped = Ensure.IsNotNull(wrapped, nameof(wrapped));
             _transformer = Ensure.IsNotNull(transformer, nameof(transformer));
         }
+
+        /// <inheritdoc/>
+        public BsonTimestamp ClusterTime => _wrapped.ClusterTime;
 
         /// <inheritdoc/>
         public IEnumerable<TToDocument> Current

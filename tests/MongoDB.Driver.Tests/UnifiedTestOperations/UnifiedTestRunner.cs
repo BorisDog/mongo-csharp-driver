@@ -253,7 +253,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             {
                 actualResult.Exception.Should().BeNull();
 
-                new UnifiedValueMatcher(entityMap).AssertValuesMatch(actualResult.Result, expectedResult);
+                new UnifiedValueMatcher(entityMap).AssertValuesMatch(actualResult.Result, expectedResult, operation.ToString());
             }
             if (operation.TryGetValue("expectError", out var expectedError))
             {
@@ -275,6 +275,10 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                 else if (actualResult.ChangeStream != null)
                 {
                     entityMap.AddChangeStream(saveResultAsEntity.AsString, actualResult.ChangeStream);
+                }
+                else if (actualResult.Cursor != null)
+                {
+                    entityMap._cursors.Add(saveResultAsEntity.AsString, actualResult.Cursor);
                 }
                 else
                 {

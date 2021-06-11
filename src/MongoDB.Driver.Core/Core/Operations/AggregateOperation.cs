@@ -391,6 +391,7 @@ namespace MongoDB.Driver.Core.Operations
                 result.PostBatchResumeToken,
                 _batchSize,
                 null, // limit
+                null, // atClusterTime
                 _resultSerializer,
                 MessageEncoderSettings,
                 _maxAwaitTime);

@@ -24,9 +24,18 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         private IEnumerator<ChangeStreamDocument<BsonDocument>> _changeStream;
         private Exception _exception;
         private BsonValue _result;
+        private IAsyncCursor<BsonDocument> _cursor;
 
         private OperationResult()
         {
+        }
+
+        public static OperationResult FromCursor(IAsyncCursor<BsonDocument> cursor)
+        {
+            return new OperationResult
+            {
+                _cursor = cursor
+            };
         }
 
         public static OperationResult FromChangeStream(IEnumerator<ChangeStreamDocument<BsonDocument>> changeStream)
@@ -56,5 +65,6 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         public IEnumerator<ChangeStreamDocument<BsonDocument>> ChangeStream => _changeStream;
         public Exception Exception => _exception;
         public BsonValue Result => _result;
+        public IAsyncCursor<BsonDocument> Cursor => _cursor;
     }
 }

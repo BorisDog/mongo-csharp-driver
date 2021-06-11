@@ -548,6 +548,7 @@ namespace MongoDB.Driver.Core.Operations
                 batch.CursorId,
                 _batchSize,
                 _limit < 0 ? Math.Abs(_limit.Value) : _limit,
+                null, // atClusterTime
                 _resultSerializer,
                 _messageEncoderSettings);
         }

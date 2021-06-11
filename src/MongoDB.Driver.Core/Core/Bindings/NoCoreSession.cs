@@ -81,6 +81,12 @@ namespace MongoDB.Driver.Core.Bindings
         /// <inheritdoc />
         public ICoreServerSession ServerSession => NoCoreServerSession.Instance;
 
+        /// <inheritdoc />
+        public bool IsSnapshot => true;
+
+        /// <inheritdoc />
+        public BsonTimestamp SnapshotClusterTime { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
         // public methods
         /// <inheritdoc />
         public void AbortTransaction(CancellationToken cancellationToken = default(CancellationToken))

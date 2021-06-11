@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver
@@ -52,6 +53,9 @@ namespace MongoDB.Driver
         }
 
         // properties
+        /// <inheritdoc/>
+        public BsonTimestamp ClusterTime => _cursor.ClusterTime;
+
         /// <inheritdoc/>
         public IEnumerable<TDocument> Current
         {

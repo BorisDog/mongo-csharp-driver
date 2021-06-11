@@ -92,6 +92,23 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         var stages = argument.Value.AsBsonArray.Cast<BsonDocument>();
                         pipeline = new BsonDocumentStagePipelineDefinition<BsonDocument, BsonDocument>(stages);
                         break;
+                    case "readConcern":
+                        var readConcernDocument = argument.Value.AsBsonDocument.DeepClone().AsBsonDocument;
+
+                        if (readConcernDocument.TryGetValue("atClusterTime", out var clusterTimeLong))
+                        {
+                            var clusterTimestamp = new BsonTimestamp(clusterTimeLong.AsInt64);
+                            readConcernDocument.Add("atClusterTime", clusterTimestamp);
+                        }
+                        else if (readConcernDocument.TryGetValue("cursorClusterTime", out var cursorClusterTime))
+                        {
+                            var clusterTimestamp = _entityMap._cursors[cursorClusterTime.AsString];
+                            readConcernDocument.Add("atClusterTime", clusterTimestamp.ClusterTime);
+                        }
+                        var readConcern = ReadConcern.FromBsonDocument(readConcernDocument);
+
+                        collection = collection.WithReadConcern(readConcern);
+                        break;
                     default:
                         throw new FormatException($"Invalid AggregateOperation argument name: '{argument.Name}'.");
                 }

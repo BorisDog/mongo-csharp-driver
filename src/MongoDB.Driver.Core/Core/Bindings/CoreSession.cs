@@ -40,6 +40,7 @@ namespace MongoDB.Driver.Core.Bindings
         private readonly IOperationClock _operationClock = new OperationClock();
         private readonly CoreSessionOptions _options;
         private readonly ICoreServerSession _serverSession;
+        private BsonTimestamp _snapshotClusterTime;
 
         // constructors
         /// <summary>
@@ -80,6 +81,9 @@ namespace MongoDB.Driver.Core.Bindings
         public bool IsCausallyConsistent => _options.IsCausallyConsistent;
 
         /// <inheritdoc />
+        public bool IsSnapshot => _options.IsSnapshot;
+
+        /// <inheritdoc />
         public bool IsDirty => _serverSession.IsDirty;
 
         /// <inheritdoc />
@@ -111,6 +115,19 @@ namespace MongoDB.Driver.Core.Bindings
 
         /// <inheritdoc />
         public BsonTimestamp OperationTime => _operationClock.OperationTime;
+
+        /// <inheritdoc />
+        public BsonTimestamp SnapshotClusterTime
+        {
+            get
+            {
+                return _snapshotClusterTime;
+            }
+            set
+            {
+                _snapshotClusterTime = value;
+            }
+        }
 
         /// <inheritdoc />
         public CoreSessionOptions Options => _options;

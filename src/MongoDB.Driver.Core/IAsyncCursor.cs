@@ -31,6 +31,14 @@ namespace MongoDB.Driver
     public interface IAsyncCursor<out TDocument> : IDisposable
     {
         /// <summary>
+        /// Gets the cluster time.
+        /// </summary>
+        /// <value>
+        /// The cluster time.
+        /// </value>
+        BsonTimestamp ClusterTime { get; }
+
+        /// <summary>
         /// Gets the current batch of documents.
         /// </summary>
         /// <value>

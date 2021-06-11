@@ -486,6 +486,10 @@ namespace MongoDB.Driver.Core.Operations
             var collectionNamespace = CollectionNamespace.FromFullName(cursorDocument["ns"].AsString);
             var firstBatch = CreateFirstCursorBatch(cursorDocument);
 
+            ReadConcernHelper.UpdateSnapshotClusterTime(channelSource.Session, cursorDocument);
+
+            var atClusterTime = _readConcern.Level == ReadConcernLevel.Snapshot ? cursorDocument["atClusterTime"].AsBsonTimestamp : null;
+
             return new AsyncCursor<TDocument>(
                 getMoreChannelSource,
                 collectionNamespace,
@@ -494,6 +498,7 @@ namespace MongoDB.Driver.Core.Operations
                 firstBatch.CursorId,
                 _batchSize,
                 _limit < 0 ? Math.Abs(_limit.Value) : _limit,
+                atClusterTime,
                 _resultSerializer,
                 _messageEncoderSettings,
                 _cursorType == CursorType.TailableAwait ? _maxAwaitTime : null);
