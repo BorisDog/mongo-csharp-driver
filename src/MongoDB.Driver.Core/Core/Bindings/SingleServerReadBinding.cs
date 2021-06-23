@@ -92,7 +92,7 @@ namespace MongoDB.Driver.Core.Bindings
             // Should be addressed by CSHARP-3556
             if (_server.Description.State == ServerState.Disconnected)
             {
-                SpinWait.SpinUntil(() => _server.Description.State == ServerState.Connected, 1000);
+                SpinWait.SpinUntil(() => _server.Description.State == ServerState.Connected, MongoInternalDefaults.SingleServerSelectionTimeoutMS);
             }
 
             return new ChannelSourceHandle(new ServerChannelSource(_server, _session.Fork()));

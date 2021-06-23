@@ -71,7 +71,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
             public bool IsDisposed => _state == State.Disposed;
             public State State => _state;
 
-            // returns whether the current transition is self-transition
+            // returns whether the current transition is not self-transition
             public bool TransitionState(State newState)
             {
                 var previousState = _state;

@@ -29,12 +29,12 @@ namespace MongoDB.Driver.Core.Misc
             Entered
         }
 
-        public sealed class SemaphoreSignalableAwaiter : IDisposable
+        public sealed class SemaphoreSlimSignalableAwaiter : IDisposable
         {
             private readonly SemaphoreSlimSignalable _semaphoreSlimSignalable;
             private bool _enteredSemaphore;
 
-            public SemaphoreSignalableAwaiter(SemaphoreSlimSignalable semaphoreSlimSignalable)
+            public SemaphoreSlimSignalableAwaiter(SemaphoreSlimSignalable semaphoreSlimSignalable)
             {
                 _semaphoreSlimSignalable = semaphoreSlimSignalable;
                 _enteredSemaphore = false;
@@ -169,8 +169,8 @@ namespace MongoDB.Driver.Core.Misc
             }
         }
 
-        public SemaphoreSignalableAwaiter CreateAwaiter() =>
-            new SemaphoreSignalableAwaiter(this);
+        public SemaphoreSlimSignalableAwaiter CreateAwaiter() =>
+            new SemaphoreSlimSignalableAwaiter(this);
 
         public void Release()
         {
