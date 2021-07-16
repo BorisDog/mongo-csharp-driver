@@ -29,12 +29,14 @@ using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Helpers;
 using MongoDB.Driver.Core.Servers;
+using MongoDB.Driver.Core.TestHelpers.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Core.ConnectionPools
 {
-    public class ExclusiveConnectionPoolTests
+    public class ExclusiveConnectionPoolTests : TestLoggable
     {
         private Mock<IConnectionFactory> _mockConnectionFactory;
         private DnsEndPoint _endPoint;
@@ -43,7 +45,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
         private ConnectionPoolSettings _settings;
         private ExclusiveConnectionPool _subject;
 
-        public ExclusiveConnectionPoolTests()
+        public ExclusiveConnectionPoolTests(ITestOutputHelper testOutputHelper) : base(testOutputHelper)
         {
             _mockConnectionFactory = new Mock<IConnectionFactory> { DefaultValue = DefaultValue.Mock };
             _endPoint = new DnsEndPoint("localhost", 27017);
@@ -872,7 +874,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 _endPoint,
                 connectionPoolSettings ?? _settings,
                 connectionFactory ?? _mockConnectionFactory.Object,
-                _capturedEvents);
+                _capturedEvents,
+                CreateLogger<ExclusiveConnectionPool>());
         }
 
         private void InitializeAndWait()

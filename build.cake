@@ -153,7 +153,7 @@ Task("Test")
             NoBuild = true,
             NoRestore = true,
             Configuration = configuration,
-            ArgumentCustomization = args => args.Append("-- RunConfiguration.TargetPlatform=x64")
+            ArgumentCustomization = args => args.Append("--logger \"console;verbosity=detailed\" -- RunConfiguration.TargetPlatform=x64")
         };
         switch (target.ToLowerInvariant())
         {

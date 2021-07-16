@@ -23,6 +23,7 @@ using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
+using MongoDB.Driver.Logger;
 
 namespace MongoDB.Driver.Core.ConnectionPools
 {
@@ -57,13 +58,16 @@ namespace MongoDB.Driver.Core.ConnectionPools
         private readonly Action<ConnectionPoolClearedEvent> _clearedEventHandler;
         private readonly Action<ConnectionCreatedEvent> _connectionCreatedEventHandler;
 
+        private readonly ILogger<ExclusiveConnectionPool> _logger;
+
         // constructors
         public ExclusiveConnectionPool(
             ServerId serverId,
             EndPoint endPoint,
             ConnectionPoolSettings settings,
             IConnectionFactory connectionFactory,
-            IEventSubscriber eventSubscriber)
+            IEventSubscriber eventSubscriber,
+            ILogger<ExclusiveConnectionPool> logger = null)
         {
             _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
             _endPoint = Ensure.IsNotNull(endPoint, nameof(endPoint));
@@ -97,6 +101,9 @@ namespace MongoDB.Driver.Core.ConnectionPools
             eventSubscriber.TryGetEventHandler(out _clearingEventHandler);
             eventSubscriber.TryGetEventHandler(out _clearedEventHandler);
             eventSubscriber.TryGetEventHandler(out _connectionCreatedEventHandler);
+
+            _logger = logger;
+            _logger.LogInfo($"ConnectionPool {EndPointHelper.ToString(_endPoint)} created.");
         }
 
         // properties
@@ -210,6 +217,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
             Interlocked.Increment(ref _generation);
 
+            _logger.LogInfo($"ConnectionPool {EndPointHelper.ToString(_endPoint)} cleared");
+
             _clearedEventHandler?.Invoke(new ConnectionPoolClearedEvent(_serverId, _settings));
         }
 
@@ -248,6 +257,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 }
 
                 MaintainSizeAsync().ConfigureAwait(false);
+
+                _logger.LogInfo($"ConnectionPool {EndPointHelper.ToString(_endPoint)} initialized");
             }
         }
 
@@ -255,6 +266,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
         {
             if (_state.TryChange(State.Disposed))
             {
+                _logger.LogInfo($"ConnectionPool {EndPointHelper.ToString(_endPoint)} disposed");
+
                 if (_closingEventHandler != null)
                 {
                     _closingEventHandler(new ConnectionPoolClosingEvent(_serverId));
@@ -270,6 +283,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 {
                     _closedEventHandler(new ConnectionPoolClosedEvent(_serverId));
                 }
+
+                _logger.LogInfo($"ConnectionPool {EndPointHelper.ToString(_endPoint)} disposed");
             }
         }
 
