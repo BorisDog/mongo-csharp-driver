@@ -44,7 +44,6 @@ namespace MongoDB.Driver.Core.Operations
             try
             {
                 context.Initialize(cancellationToken);
-                context.PinChannelIfNeeded();
 
                 ChannelPinningHelper.PinChannellIfRequired(
                     context.ChannelSource,
@@ -73,7 +72,6 @@ namespace MongoDB.Driver.Core.Operations
             try
             {
                 await context.InitializeAsync(cancellationToken).ConfigureAwait(false);
-                context.PinChannelIfNeeded();
 
                 ChannelPinningHelper.PinChannellIfRequired(
                     context.ChannelSource,
@@ -152,8 +150,7 @@ namespace MongoDB.Driver.Core.Operations
         {
             if (_retryRequested)
             {
-                // channel is not initialized yet, therefore passing connectionDescription:null.
-                if (requests.Any(r => !r.IsRetryable(connectionDescription: null)))
+                if (requests.Any(r => !r.IsRetryable(_channel.ConnectionDescription)))
                 {
                     _retryRequested = false;
                 }
@@ -239,21 +236,6 @@ namespace MongoDB.Driver.Core.Operations
                 {
                     throw;
                 }
-            }
-        }
-
-        private void PinChannelIfNeeded()
-        {
-            if (Binding.Session.IsInTransaction &&
-                ChannelPinningHelper.PinChannelSourceAndChannelIfRequired(
-                    ChannelSource,
-                    Channel,
-                    Binding.Session,
-                    out var pinnedChannelSource,
-                    out var pinnedChannel))
-            {
-                ReplaceChannelSource(pinnedChannelSource);
-                ReplaceChannel(pinnedChannel);
             }
         }
     }

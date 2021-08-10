@@ -1,4 +1,4 @@
-﻿/* Copyright 2020-present MongoDB Inc.
+﻿/* Copyright 2021-present MongoDB Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -38,12 +38,11 @@ namespace MongoDB.Driver.Tests.Specifications.retryable_writes.prose_tests
         [ParameterAttributeData]
         public void PoolClearedError_write_retryablity_test([Values(false, true)] bool async)
         {
-            var minVersion = new SemanticVersion(4, 2, 9, "");
             RequireServer.Check()
-                .VersionGreaterThanOrEqualTo(minVersion)
-                .ClusterTypes(new[] { ClusterType.ReplicaSet, ClusterType.Sharded });
+                .Supports(Feature.FailPointsBlockConnection)
+                .ClusterTypes(ClusterType.ReplicaSet, ClusterType.Sharded);
 
-            var heartbeatInterval = TimeSpan.FromMilliseconds(1000);
+            var heartbeatInterval = TimeSpan.FromMilliseconds(500);
             var eventsWaitTimeout = TimeSpan.FromMilliseconds(5000);
 
             var failPointCommand = BsonDocument.Parse(
