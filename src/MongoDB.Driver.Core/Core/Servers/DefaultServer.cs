@@ -19,7 +19,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Configuration;
@@ -44,7 +43,7 @@ namespace MongoDB.Driver.Core.Servers
         #endregion
 
         private readonly ServerDescription _baseDescription;
-        private ServerDescription _currentDescription;
+        private volatile ServerDescription _currentDescription;
         private readonly IServerMonitor _monitor;
 
         public DefaultServer(
@@ -78,7 +77,7 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         // properties
-        public override ServerDescription Description => Interlocked.CompareExchange(ref _currentDescription, value: null, comparand: null);
+        public override ServerDescription Description => _currentDescription;
 
         // public methods
         public override void Invalidate(string reasonInvalidated, bool clearConnectionPool, TopologyVersion topologyVersion)
@@ -187,7 +186,7 @@ namespace MongoDB.Driver.Core.Servers
         // private methods
         private void OnMonitorDescriptionChanged(object sender, ServerDescriptionChangedEventArgs e)
         {
-            var currentDescription = Interlocked.CompareExchange(ref _currentDescription, value: null, comparand: null);
+            var currentDescription = _currentDescription;
 
             var heartbeatException = e.NewServerDescription.HeartbeatException;
             // The heartbeat commands are hello (or legacy hello) + buildInfo. These commands will throw a MongoCommandException on
@@ -209,29 +208,35 @@ namespace MongoDB.Driver.Core.Servers
 
         private void SetDescription(ServerDescription newDescription)
         {
-            var oldDescription = Interlocked.CompareExchange(ref _currentDescription, value: newDescription, comparand: _currentDescription);
-            OnDescriptionChanged(sender: this, new ServerDescriptionChangedEventArgs(oldDescription, newDescription));
-        }
+            var oldDescription = _currentDescription;
 
-        private void OnDescriptionChanged(object sender, ServerDescriptionChangedEventArgs e)
-        {
-            var newDescription = e.NewServerDescription;
             if (newDescription.HeartbeatException != null)
             {
+                // set new description before clearing the pool
+                _currentDescription = newDescription;
+
                 ConnectionPool.Clear();
             }
-            else if (newDescription.IsDataBearing ||
-                (newDescription.Type != ServerType.Unknown && IsDirectConnection()))
+            else
             {
-                // The spec requires to check (server.type != Unknown and newTopologyDescription.type == Single)
-                // in C# driver servers in single topology will be only selectable if direct connection was requested
-                // therefore it is sufficient to check whether the connection mode is directConnection.
+                if (newDescription.IsDataBearing ||
+                    (newDescription.Type != ServerType.Unknown && IsDirectConnection()))
+                {
+                    // The spec requires to check (server.type != Unknown and newTopologyDescription.type == Single)
+                    // in C# driver servers in single topology will be only selectable if direct connection was requested
+                    // therefore it is sufficient to check whether the connection mode is directConnection.
 
-                ConnectionPool.SetReady();
+                    ConnectionPool.SetReady();
+                }
+
+                // set new description after marking pool as ready
+                _currentDescription = newDescription;
             }
 
+            var descriptionChangedEvent = new ServerDescriptionChangedEventArgs(oldDescription, newDescription);
+
             // propagate event to upper levels
-            TriggerServerDescriptionChanged(this, e);
+            TriggerServerDescriptionChanged(this, descriptionChangedEvent);
         }
 
         private bool ShouldInvalidateServer(
