@@ -221,7 +221,7 @@ namespace MongoDB.Driver.Core.Operations
                 {
                     batch.Result = ExecuteBatch(context, batch, cancellationToken);
                 }
-                return helper.GetFinalResultOrThrow(context.Channel.ConnectionDescription?.ConnectionId);
+                return helper.GetFinalResultOrThrow(context.Channel.ConnectionDescription.ConnectionId);
             }
         }
 
@@ -239,7 +239,7 @@ namespace MongoDB.Driver.Core.Operations
                 {
                     batch.Result = await ExecuteBatchAsync(context, batch, cancellationToken).ConfigureAwait(false);
                 }
-                return helper.GetFinalResultOrThrow(context.Channel.ConnectionDescription?.ConnectionId);
+                return helper.GetFinalResultOrThrow(context.Channel.ConnectionDescription.ConnectionId);
             }
         }
 
