@@ -215,14 +215,13 @@ namespace MongoDB.Driver.Core.Operations
             {
                 EnsureCollationIsSupportedIfAnyRequestHasCollation(context);
                 EnsureHintIsSupportedIfAnyRequestHasHint(context);
-
                 context.DisableRetriesIfAnyWriteRequestIsNotRetryable(_requests);
                 var helper = new BatchHelper(_requests, _isOrdered, _writeConcern);
                 foreach (var batch in helper.GetBatches())
                 {
                     batch.Result = ExecuteBatch(context, batch, cancellationToken);
                 }
-                return helper.GetFinalResultOrThrow(context.Channel?.ConnectionDescription?.ConnectionId);
+                return helper.GetFinalResultOrThrow(context.Channel.ConnectionDescription?.ConnectionId);
             }
         }
 
@@ -234,14 +233,13 @@ namespace MongoDB.Driver.Core.Operations
             {
                 EnsureCollationIsSupportedIfAnyRequestHasCollation(context);
                 EnsureHintIsSupportedIfAnyRequestHasHint(context);
-
                 context.DisableRetriesIfAnyWriteRequestIsNotRetryable(_requests);
                 var helper = new BatchHelper(_requests, _isOrdered, _writeConcern);
                 foreach (var batch in helper.GetBatches())
                 {
                     batch.Result = await ExecuteBatchAsync(context, batch, cancellationToken).ConfigureAwait(false);
                 }
-                return helper.GetFinalResultOrThrow(context.Channel?.ConnectionDescription?.ConnectionId);
+                return helper.GetFinalResultOrThrow(context.Channel.ConnectionDescription?.ConnectionId);
             }
         }
 
