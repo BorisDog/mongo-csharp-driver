@@ -37,10 +37,9 @@ namespace MongoDB.Driver.Tests.Specifications.retryable_reads
         [ParameterAttributeData]
         public void PoolClearedError_read_retryablity_test([Values(true, false)] bool async)
         {
-            var minVersion = new SemanticVersion(4, 2, 9, "");
-            RequireServer.Check().VersionGreaterThanOrEqualTo(minVersion);
+            RequireServer.Check().Supports(Feature.FailPointsBlockConnection);
 
-            var heartbeatInterval = TimeSpan.FromMilliseconds(1000);
+            var heartbeatInterval = TimeSpan.FromMilliseconds(500);
             var eventsWaitTimeout = TimeSpan.FromMilliseconds(5000);
 
             var failPointCommand = BsonDocument.Parse(
