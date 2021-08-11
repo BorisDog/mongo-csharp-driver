@@ -187,8 +187,8 @@ namespace MongoDB.Driver.Core.Operations
             {
                 if (RetryableReadOperationExecutor.ShouldConnectionAcquireBeRetried(this, serverDescription))
                 {
-                    ReplaceChannelSource(Binding.GetReadChannelSource(cancellationToken));
-                    ReplaceChannel(ChannelSource.GetChannel(cancellationToken));
+                    ReplaceChannelSource(_binding.GetReadChannelSource(cancellationToken));
+                    ReplaceChannel(_channelSource.GetChannel(cancellationToken));
                 }
                 else
                 {
@@ -210,8 +210,8 @@ namespace MongoDB.Driver.Core.Operations
             {
                 if (RetryableReadOperationExecutor.ShouldConnectionAcquireBeRetried(this, serverDescription))
                 {
-                    ReplaceChannelSource(await Binding.GetReadChannelSourceAsync(cancellationToken).ConfigureAwait(false));
-                    ReplaceChannel(await ChannelSource.GetChannelAsync(cancellationToken).ConfigureAwait(false));
+                    ReplaceChannelSource(await _binding.GetReadChannelSourceAsync(cancellationToken).ConfigureAwait(false));
+                    ReplaceChannel(await _channelSource.GetChannelAsync(cancellationToken).ConfigureAwait(false));
                 }
                 else
                 {

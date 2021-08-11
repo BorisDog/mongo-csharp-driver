@@ -80,7 +80,6 @@ namespace MongoDB.Driver.Core.Operations
 
                 return context;
             }
-
             catch
             {
                 context.Dispose();

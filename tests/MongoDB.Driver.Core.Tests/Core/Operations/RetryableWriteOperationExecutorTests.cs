@@ -142,9 +142,7 @@ namespace MongoDB.Driver.Core.Tests.Core.Operations
         private RetryableWriteContext CreateContext(bool retryRequested, bool areRetryableWritesSupported, bool hasSessionId, bool isInTransaction)
         {
             var binding = CreateBinding(areRetryableWritesSupported, hasSessionId, isInTransaction);
-            var context = RetryableWriteContext.Create(binding, retryRequested, CancellationToken.None);
-
-            return context;
+            return RetryableWriteContext.Create(binding, retryRequested, CancellationToken.None);
         }
 
         private IRetryableWriteOperation<BsonDocument> CreateOperation(bool withWriteConcern, bool isAcknowledged)

@@ -73,6 +73,7 @@ namespace MongoDB.Driver.Tests.Specifications.retryable_reads
             }
 
             settings.MaxConnectionPoolSize = 1;
+            settings.RetryReads = true;
 
             var eventCapturer = new EventCapturer()
                .Capture<ConnectionPoolClearedEvent>()
@@ -92,7 +93,7 @@ namespace MongoDB.Driver.Tests.Specifications.retryable_reads
             {
                 if (async)
                 {
-                    collection.FindAsync(FilterDefinition<BsonDocument>.Empty)
+                    _ = collection.FindAsync(FilterDefinition<BsonDocument>.Empty)
                         .GetAwaiter()
                         .GetResult()
                         .ToListAsync()
