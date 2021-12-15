@@ -92,7 +92,7 @@ namespace MongoDB.Driver.Core.Connections
             MessageEncoderSettings encoderSettings,
             Stopwatch stopwatch)
         {
-            using (var stream = new ByteBufferStream(buffer, ownsBuffer: false))
+            using (var stream = BsonUtils.GetByteBufferStream(buffer, ownsBuffer: false))
             {
                 var messageQueue = new Queue<RequestMessage>(messages);
 
@@ -590,7 +590,7 @@ namespace MongoDB.Driver.Core.Connections
             if (replyMessage == null)
             {
                 // ReplyMessage is generic, which means that we can't use it here, so, we need to use a different one...
-                using (var stream = new ByteBufferStream(buffer, ownsBuffer: false))
+                using (var stream = BsonUtils.GetByteBufferStream(buffer, ownsBuffer: false))
                 {
                     var encoderFactory = new BinaryMessageEncoderFactory(stream, encoderSettings);
                     replyMessage = (ReplyMessage<RawBsonDocument>)encoderFactory

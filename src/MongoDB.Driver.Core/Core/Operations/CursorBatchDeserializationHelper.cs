@@ -52,7 +52,7 @@ namespace MongoDB.Driver.Core.Operations
 #pragma warning restore 618
             };
 
-            using (var stream = new ByteBufferStream(batch.Slice, ownsBuffer: false))
+            using (var stream = BsonUtils.GetByteBufferStream(batch.Slice, ownsBuffer: false))
             using (var reader = new BsonBinaryReader(stream, readerSettings))
             {
                 // BSON requires that the top level object be a document, but an array looks close enough to a document that we can pretend it is one

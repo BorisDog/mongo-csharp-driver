@@ -17,6 +17,7 @@ using System;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using MongoDB.Bson.IO;
 
 namespace MongoDB.Bson
 {
@@ -26,6 +27,48 @@ namespace MongoDB.Bson
     /// </summary>
     public static class BsonUtils
     {
+        private static bool _isOptimized = false;
+
+        public static bool Optimized
+        {
+            get
+            {
+                return _isOptimized;
+            }
+            set
+            {
+                _isOptimized = value;
+
+                //NameDecoder = _isOptimized ? Utf8NameDecoderOpt.Instance : Utf8NameDecoder.Instance;
+            }
+        }
+
+        public static INameDecoder NameDecoder { get; private set; } = Utf8NameDecoder.Instance;
+
+        public static BsonStream GetByteBufferStream(IByteBuffer buffer, bool ownsBuffer = false)
+        {
+            if (_isOptimized)
+            {
+                return new ByteBufferStreamOpt(buffer, ownsBuffer);
+            }
+            else
+            {
+                return new ByteBufferStream(buffer, ownsBuffer);
+            }
+        }
+
+        public static IByteBuffer GetMultiChunkBuffer(IBsonChunkSource chunkSource)
+        {
+            if (_isOptimized)
+            {
+                return new MultiChunkBufferOpt(chunkSource);
+            }
+            else
+            {
+                return new MultiChunkBuffer(chunkSource);
+            }
+        }
+
         // public static methods
         /// <summary>
         /// Gets a friendly class name suitable for use in error messages.

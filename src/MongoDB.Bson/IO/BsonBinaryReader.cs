@@ -39,6 +39,8 @@ namespace MongoDB.Bson.IO
         {
         }
 
+        public bool IsArrayContext => _context.ContextType == ContextType.Array;
+
         /// <summary>
         /// Initializes a new instance of the BsonBinaryReader class.
         /// </summary>

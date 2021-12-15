@@ -15,6 +15,7 @@
 
 using System;
 using System.IO;
+using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Misc;
@@ -71,8 +72,8 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders.BinaryEncoders
             var compressorType = (CompressorType)stream.ReadByte();
             var compressor = _compressorSource.Get(compressorType);
 
-            using (var uncompressedBuffer = new MultiChunkBuffer(new OutputBufferChunkSource(BsonChunkPool.Default)))
-            using (var uncompressedStream = new ByteBufferStream(uncompressedBuffer, ownsBuffer: false))
+            using (var uncompressedBuffer = BsonUtils.GetMultiChunkBuffer(new OutputBufferChunkSource(BsonChunkPool.Default)))
+            using (var uncompressedStream = BsonUtils.GetByteBufferStream(uncompressedBuffer, ownsBuffer: false))
             {
                 uncompressedStream.WriteInt32(uncompressedSize + MessageHeaderLength);
                 uncompressedStream.WriteInt32(requestId);

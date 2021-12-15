@@ -15,7 +15,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace MongoDB.Bson.IO
 {
@@ -68,7 +67,14 @@ namespace MongoDB.Bson.IO
             }
             else
             {
-                return new MultiChunkBuffer(chunks, 0, isReadOnly: false);
+                if (BsonUtils.Optimized)
+                {
+                    return new MultiChunkBufferOpt(chunks, 0, isReadOnly: false);
+                }
+                else
+                {
+                    return new MultiChunkBuffer(chunks, 0, isReadOnly: false);
+                }
             }
         }
     }

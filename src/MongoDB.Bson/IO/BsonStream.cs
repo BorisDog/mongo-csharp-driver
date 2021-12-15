@@ -14,11 +14,8 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MongoDB.Bson.IO
 {
@@ -39,6 +36,11 @@ namespace MongoDB.Bson.IO
         /// </summary>
         /// <returns>An ArraySegment containing the CString bytes (without the null byte).</returns>
         public abstract ArraySegment<byte> ReadCStringBytes();
+
+        public virtual bool ReadCStringBytesAndCompare(byte[] bytesToCompare)
+        {
+            throw new NotSupportedException();
+        }
 
         /// <summary>
         /// Reads a BSON Decimal128 from the stream.

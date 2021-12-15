@@ -75,7 +75,7 @@ namespace MongoDB.Bson.IO
         public BsonReaderState State
         {
             get { return _state; }
-            protected set { _state = value; }
+            set { _state = value; }
         }
 
         // protected properties
@@ -250,7 +250,7 @@ namespace MongoDB.Bson.IO
         /// <returns>The name of the element.</returns>
         public virtual string ReadName()
         {
-            return ReadName(Utf8NameDecoder.Instance);
+            return ReadName(BsonUtils.NameDecoder);
         }
 
         /// <summary>

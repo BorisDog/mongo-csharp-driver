@@ -22,6 +22,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
@@ -676,10 +677,10 @@ namespace MongoDB.Driver.Core.Connections
             MessageEncoderSettings messageEncoderSettings)
         {
             var outputBufferChunkSource = new OutputBufferChunkSource(BsonChunkPool.Default);
-            var compressedBuffer = new MultiChunkBuffer(outputBufferChunkSource);
+            var compressedBuffer = BsonUtils.GetMultiChunkBuffer(outputBufferChunkSource);
 
-            using (var uncompressedStream = new ByteBufferStream(uncompressedBuffer, ownsBuffer: false))
-            using (var compressedStream = new ByteBufferStream(compressedBuffer, ownsBuffer: false))
+            using (var uncompressedStream = BsonUtils.GetByteBufferStream(uncompressedBuffer, ownsBuffer: false))
+            using (var compressedStream = BsonUtils.GetByteBufferStream(compressedBuffer, ownsBuffer: false))
             {
                 foreach (var message in messages)
                 {
@@ -687,7 +688,7 @@ namespace MongoDB.Driver.Core.Connections
                     uncompressedStream.Position -= 4;
 
                     using (var uncompressedMessageSlice = uncompressedBuffer.GetSlice((int)uncompressedStream.Position, uncompressedMessageLength))
-                    using (var uncompressedMessageStream = new ByteBufferStream(uncompressedMessageSlice, ownsBuffer: false))
+                    using (var uncompressedMessageStream = BsonUtils.GetByteBufferStream(uncompressedMessageSlice, ownsBuffer: false))
                     {
                         if (message.MayBeCompressed)
                         {
@@ -707,8 +708,8 @@ namespace MongoDB.Driver.Core.Connections
 
         private void CompressMessage(
             RequestMessage message,
-            ByteBufferStream uncompressedMessageStream,
-            ByteBufferStream compressedStream,
+            BsonStream uncompressedMessageStream,
+            BsonStream compressedStream,
             MessageEncoderSettings messageEncoderSettings)
         {
             var compressedMessage = new CompressedMessage(message, uncompressedMessageStream, _sendCompressorType.Value);
@@ -930,7 +931,7 @@ namespace MongoDB.Driver.Core.Connections
 
                 ResponseMessage message;
                 _stopwatch.Restart();
-                using (var stream = new ByteBufferStream(buffer, ownsBuffer: false))
+                using (var stream = BsonUtils.GetByteBufferStream(buffer, ownsBuffer: false))
                 {
                     var encoderFactory = new BinaryMessageEncoderFactory(stream, _messageEncoderSettings, _compressorSource);
 
@@ -1029,8 +1030,8 @@ namespace MongoDB.Driver.Core.Connections
 
                 var serializationStopwatch = Stopwatch.StartNew();
                 var outputBufferChunkSource = new OutputBufferChunkSource(BsonChunkPool.Default);
-                var buffer = new MultiChunkBuffer(outputBufferChunkSource);
-                using (var stream = new ByteBufferStream(buffer, ownsBuffer: false))
+                var buffer = BsonUtils.GetMultiChunkBuffer(outputBufferChunkSource);
+                using (var stream = BsonUtils.GetByteBufferStream(buffer, ownsBuffer: false))
                 {
                     var encoderFactory = new BinaryMessageEncoderFactory(stream, _messageEncoderSettings, compressorSource: null);
                     foreach (var message in _messages)

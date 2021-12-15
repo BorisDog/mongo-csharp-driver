@@ -187,17 +187,12 @@ namespace MongoDB.Bson.IO
             {
                 _referenceCountedChunk = referenceCountedChunk;
                 _referenceCountedChunk.IncrementReferenceCount();
+
+                Bytes = new ArraySegment<byte>(_referenceCountedChunk.Chunk);
             }
 
             // properties
-            public ArraySegment<byte> Bytes
-            {
-                get
-                {
-                    ThrowIfDisposed();
-                    return new ArraySegment<byte>(_referenceCountedChunk.Chunk);
-                }
-            }
+            public ArraySegment<byte> Bytes { get; }
 
             // methods
             public void Dispose()

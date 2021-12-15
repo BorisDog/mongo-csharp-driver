@@ -545,7 +545,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                     throw new MongoWriteConcernException(connectionId, message, writeConcernResult);
                 }
 
-                using (var stream = new ByteBufferStream(rawDocument.Slice, ownsBuffer: false))
+                using (var stream = BsonUtils.GetByteBufferStream(rawDocument.Slice, ownsBuffer: false))
                 {
                     using (var reader = new BsonBinaryReader(stream, binaryReaderSettings))
                     {

@@ -253,7 +253,7 @@ namespace MongoDB.Bson.IO
         /// <returns>The name of the element.</returns>
         public static string ReadName(this IBsonReader reader)
         {
-            return reader.ReadName(Utf8NameDecoder.Instance);
+            return reader.ReadName(BsonUtils.NameDecoder);
         }
 
         /// <summary>

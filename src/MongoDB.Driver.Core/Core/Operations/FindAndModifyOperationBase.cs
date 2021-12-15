@@ -213,7 +213,7 @@ namespace MongoDB.Driver.Core.Operations
             }
 #pragma warning restore 618
 
-            using (var stream = new ByteBufferStream(rawBsonDocument.Slice, ownsBuffer: false))
+            using (var stream = BsonUtils.GetByteBufferStream(rawBsonDocument.Slice, ownsBuffer: false))
             using (var reader = new BsonBinaryReader(stream, binaryReaderSettings))
             {
                 var context = BsonDeserializationContext.CreateRoot(reader);
