@@ -410,7 +410,7 @@ namespace MongoDB.Driver.Core.Clusters
                                         @"largest tuple seen, (maxSetVersion, maxElectionId), of ({4}, {5}).",
                                         args.NewServerDescription.EndPoint,
                                         args.NewServerDescription.ReplicaSetConfig.Name,
-                                        newElectionId,
+                                        newSetVersion,
                                         newElectionId,
                                         _maxElectionInfo.SetVersion,
                                         _maxElectionInfo.ElectionId)));
