@@ -620,10 +620,10 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
 
     internal static class MultiServerClusterReflector
     {
-        public static int _maxElectionInfo_setVersion(this MultiServerCluster obj)
+        public static int? _maxElectionInfo_setVersion(this MultiServerCluster obj)
         {
             var maxElectionInfo = _maxElectionInfo(obj);
-            return (int)Reflector.GetFieldValue(maxElectionInfo, "_setVersion");
+            return (int?)Reflector.GetFieldValue(maxElectionInfo, "_setVersion");
         }
 
         public static ElectionId _maxElectionInfo_electionId(this MultiServerCluster obj)

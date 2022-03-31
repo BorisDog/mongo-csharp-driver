@@ -967,7 +967,7 @@ namespace MongoDB.Driver.Core.Clusters
                 .Subject.Message.Should().Contain("Initializing (maxSetVersion, maxElectionId)");
             _capturedEvents.Next().Should().BeOfType<ClusterDescriptionChangedEvent>();
             _capturedEvents.Next().Should().BeOfType<SdamInformationEvent>()
-                .Subject.Message.Should().Contain("Updating stale setVersion");
+                .Subject.Message.Should().Contain("Updating stale electionId and setVersion");
             _capturedEvents.Next().Should().BeOfType<ClusterDescriptionChangedEvent>();
             _capturedEvents.Any().Should().BeFalse();
         }
@@ -997,7 +997,7 @@ namespace MongoDB.Driver.Core.Clusters
                 .Subject.Message.Should().Contain("Initializing (maxSetVersion, maxElectionId)");
             _capturedEvents.Next().Should().BeOfType<ClusterDescriptionChangedEvent>();
             _capturedEvents.Next().Should().BeOfType<SdamInformationEvent>()
-                .Subject.Message.Should().Contain("Updating stale electionId");
+                .Subject.Message.Should().Contain("Updating stale electionId and setVersion");
             _capturedEvents.Next().Should().BeOfType<ClusterDescriptionChangedEvent>();
             _capturedEvents.Any().Should().BeFalse();
         }
@@ -1012,7 +1012,7 @@ namespace MongoDB.Driver.Core.Clusters
             _capturedEvents.Clear();
 
             PublishDescription(subject, _firstEndPoint, ServerType.ReplicaSetPrimary, setVersion: 2, electionId: new ElectionId(ObjectId.Empty));
-            PublishDescription(subject, _secondEndPoint, ServerType.ReplicaSetPrimary, setVersion: 1, electionId: new ElectionId(ObjectId.GenerateNewId()));
+            PublishDescription(subject, _secondEndPoint, ServerType.ReplicaSetPrimary, setVersion: 1, electionId: new ElectionId(ObjectId.Empty));
 
             var description = subject.Description;
             description.Servers.Should().BeEquivalentToWithComparer(
