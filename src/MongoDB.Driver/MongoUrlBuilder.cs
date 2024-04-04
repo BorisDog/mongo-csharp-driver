@@ -133,7 +133,7 @@ namespace MongoDB.Driver
             _serverSelectionTimeout = MongoDefaults.ServerSelectionTimeout;
             _socketTimeout = MongoDefaults.SocketTimeout;
             _srvMaxHosts = null;
-            _srvServiceName = MongoInternalDefaults.MongoClientSettings.SrvServiceName;
+            _srvServiceName = MongoInternalDefaults.ServerSettings.SrvServiceName;
             _username = null;
             _useTls = false;
             _w = null;
@@ -1098,7 +1098,7 @@ namespace MongoDB.Driver
             {
                 query.AppendFormat("srvMaxHosts={0}&", _srvMaxHosts);
             }
-            if (_srvServiceName != MongoInternalDefaults.MongoClientSettings.SrvServiceName)
+            if (_srvServiceName != MongoInternalDefaults.ServerSettings.SrvServiceName)
             {
                 query.AppendFormat("srvServiceName={0}&", _srvServiceName);
             }
@@ -1202,7 +1202,7 @@ namespace MongoDB.Driver
             _serverSelectionTimeout = connectionString.ServerSelectionTimeout.GetValueOrDefault(MongoDefaults.ServerSelectionTimeout);
             _socketTimeout = connectionString.SocketTimeout.GetValueOrDefault(MongoDefaults.SocketTimeout);
             _srvMaxHosts = connectionString.SrvMaxHosts;
-            _srvServiceName = connectionString.SrvServiceName ?? MongoInternalDefaults.MongoClientSettings.SrvServiceName;
+            _srvServiceName = connectionString.SrvServiceName ?? MongoInternalDefaults.ServerSettings.SrvServiceName;
             _tlsDisableCertificateRevocationCheck = connectionString.TlsDisableCertificateRevocationCheck;
             _username = connectionString.Username;
             _useTls = connectionString.Tls.GetValueOrDefault(false);

@@ -1594,7 +1594,7 @@ namespace MongoDB.Driver.Tests
         public void TestSrvServiceName()
         {
             var subject = new MongoClientSettings { Scheme = ConnectionStringScheme.MongoDBPlusSrv };
-            subject.SrvServiceName.Should().Be(MongoInternalDefaults.MongoClientSettings.SrvServiceName);
+            subject.SrvServiceName.Should().Be(MongoInternalDefaults.ServerSettings.SrvServiceName);
 
             var srvServicName = "customname";
             subject.SrvServiceName = srvServicName;

@@ -1228,7 +1228,7 @@ namespace MongoDB.Driver
                 _serverSelectionTimeout,
                 _socketTimeout,
                 srvMaxHosts: 0, // not supported for legacy
-                srvServiceName: MongoInternalDefaults.MongoClientSettings.SrvServiceName,
+                srvServiceName: MongoInternalDefaults.ServerSettings.SrvServiceName,
                 _sslSettings,
                 _useTls,
                 _waitQueueSize,

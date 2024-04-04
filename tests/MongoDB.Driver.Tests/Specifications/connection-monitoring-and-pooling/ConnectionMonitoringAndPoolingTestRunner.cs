@@ -561,11 +561,11 @@ namespace MongoDB.Driver.Tests.Specifications.connection_monitoring_and_pooling
 
         private void ParseSettings(
             BsonDocument test,
-            out ConnectionPoolSettings connectionPoolSettings,
-            out ConnectionSettings connectionSettings)
+            out Core.Configuration.ConnectionPoolSettings connectionPoolSettings,
+            out ConnectionPoolSettings connectionSettings)
         {
-            connectionPoolSettings = new ConnectionPoolSettings(maintenanceInterval: TimeSpan.FromMilliseconds(200));
-            connectionSettings = new ConnectionSettings();
+            connectionPoolSettings = new Core.Configuration.ConnectionPoolSettings(maintenanceInterval: TimeSpan.FromMilliseconds(200));
+            connectionSettings = new ConnectionPoolSettings();
 
             if (test.TryGetValue(Schema.poolOptions, out var poolOptionsBson))
             {
@@ -623,7 +623,7 @@ namespace MongoDB.Driver.Tests.Specifications.connection_monitoring_and_pooling
 
                 var connectionFactory = new Mock<IConnectionFactory>();
                 var connectionExceptionHandler = new Mock<IConnectionExceptionHandler>();
-                connectionFactory.Setup(f => f.ConnectionSettings).Returns(() => new ConnectionSettings());
+                connectionFactory.Setup(f => f.ConnectionSettings).Returns(() => new ConnectionPoolSettings());
                 connectionFactory
                     .Setup(c => c.CreateConnection(serverId, endPoint))
                     .Returns(() =>
@@ -736,7 +736,7 @@ namespace MongoDB.Driver.Tests.Specifications.connection_monitoring_and_pooling
 
             var connectionFactory = new Mock<IConnectionFactory>();
             var exceptionHandler = new Mock<IConnectionExceptionHandler>();
-            connectionFactory.Setup(f => f.ConnectionSettings).Returns(() => new ConnectionSettings());
+            connectionFactory.Setup(f => f.ConnectionSettings).Returns(() => new ConnectionPoolSettings());
             connectionFactory
                 .Setup(c => c.CreateConnection(serverId, endPoint))
                 .Returns(() =>
@@ -825,9 +825,9 @@ namespace MongoDB.Driver.Tests.Specifications.connection_monitoring_and_pooling
             return (ConnectionId)Reflector.GetPropertyValue(@event, nameof(ConnectionId), BindingFlags.Public | BindingFlags.Instance);
         }
 
-        public static ConnectionPoolSettings ConnectionPoolSettings(this object @event)
+        public static Core.Configuration.ConnectionPoolSettings ConnectionPoolSettings(this object @event)
         {
-            return (ConnectionPoolSettings)Reflector.GetPropertyValue(@event, nameof(ConnectionPoolSettings), BindingFlags.Public | BindingFlags.Instance);
+            return (Core.Configuration.ConnectionPoolSettings)Reflector.GetPropertyValue(@event, nameof(ConnectionPoolSettings), BindingFlags.Public | BindingFlags.Instance);
         }
 
         public static ServerId ServerId(this object @event)

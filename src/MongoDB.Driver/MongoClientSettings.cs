@@ -112,8 +112,8 @@ namespace MongoDB.Driver
                 _guidRepresentation = MongoDefaults.GuidRepresentation;
             }
 #pragma warning restore 618
-            _heartbeatInterval = ServerSettings.DefaultHeartbeatInterval;
-            _heartbeatTimeout = ServerSettings.DefaultHeartbeatTimeout;
+            _heartbeatInterval = Core.Configuration.ServerSettings.DefaultHeartbeatInterval;
+            _heartbeatTimeout = Core.Configuration.ServerSettings.DefaultHeartbeatTimeout;
             _ipv6 = false;
             _libraryInfo = null;
             _linqProvider = LinqProvider.V3;
@@ -138,7 +138,7 @@ namespace MongoDB.Driver
             _serverSelectionTimeout = MongoDefaults.ServerSelectionTimeout;
             _socketTimeout = MongoDefaults.SocketTimeout;
             _srvMaxHosts = 0;
-            _srvServiceName = MongoInternalDefaults.MongoClientSettings.SrvServiceName;
+            _srvServiceName = MongoInternalDefaults.ServerSettings.SrvServiceName;
             _sslSettings = null;
             _useTls = false;
 #pragma warning disable 618
@@ -1441,7 +1441,7 @@ namespace MongoDB.Driver
                 throw new InvalidOperationException("Specifying srvMaxHosts when connecting to a replica set is invalid.");
             }
 
-            if (_srvServiceName != MongoInternalDefaults.MongoClientSettings.SrvServiceName && _scheme != ConnectionStringScheme.MongoDBPlusSrv)
+            if (_srvServiceName != MongoInternalDefaults.ServerSettings.SrvServiceName && _scheme != ConnectionStringScheme.MongoDBPlusSrv)
             {
                 throw new InvalidOperationException("Specifying srvServiceName is only allowed with the mongodb+srv scheme.");
             }

@@ -104,7 +104,7 @@ namespace MongoDB.Driver
 #pragma warning restore CS0618 // Type or member is obsolete
         }
 
-        private ConnectionPoolSettings ConfigureConnectionPool(ConnectionPoolSettings settings, ClusterKey clusterKey)
+        private Core.Configuration.ConnectionPoolSettings ConfigureConnectionPool(Core.Configuration.ConnectionPoolSettings settings, ClusterKey clusterKey)
         {
             return settings.With(
                 // maintenanceInterval: TODO: should this be configurable?
@@ -115,7 +115,7 @@ namespace MongoDB.Driver
                 waitQueueTimeout: clusterKey.WaitQueueTimeout);
         }
 
-        private ConnectionSettings ConfigureConnection(ConnectionSettings settings, ClusterKey clusterKey)
+        private ConnectionPoolSettings ConfigureConnection(ConnectionPoolSettings settings, ClusterKey clusterKey)
         {
             var authenticatorFactories = clusterKey.Credentials.Select(c => new AuthenticatorFactory(() => c.ToAuthenticator(clusterKey.ServerApi)));
             return settings.With(

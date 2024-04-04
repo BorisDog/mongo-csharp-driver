@@ -19,11 +19,11 @@ using System.Linq;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
-using MongoDB.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Servers;
+using MongoDB.TestHelpers.XunitExtensions;
 using Xunit;
 
 namespace MongoDB.Driver.Tests
@@ -511,7 +511,7 @@ namespace MongoDB.Driver.Tests
                 Assert.Equal(MongoDefaults.LocalThreshold, builder.LocalThreshold);
                 Assert.Equal(MongoDefaults.ServerSelectionTimeout, builder.ServerSelectionTimeout);
                 Assert.Equal(MongoDefaults.SocketTimeout, builder.SocketTimeout);
-                Assert.Equal(MongoInternalDefaults.MongoClientSettings.SrvServiceName, builder.SrvServiceName);
+                Assert.Equal(MongoInternalDefaults.ServerSettings.SrvServiceName, builder.SrvServiceName);
                 Assert.Equal(null, builder.Username);
 #pragma warning disable 618
                 Assert.Equal(false, builder.UseSsl);

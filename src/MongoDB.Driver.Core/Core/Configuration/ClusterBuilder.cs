@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -228,6 +229,18 @@ namespace MongoDB.Driver.Core.Configuration
             Ensure.IsNotNull(subscriber, nameof(subscriber));
 
             _eventAggregator.Subscribe(subscriber);
+            return this;
+        }
+
+        internal ClusterBuilder Subscribe(IEnumerable<IEventSubscriber> subscribers)
+        {
+            Ensure.IsNotNull(subscribers, nameof(subscribers));
+
+            foreach (var subscriber in subscribers)
+            {
+                return Subscribe(subscriber);
+            }
+
             return this;
         }
 
