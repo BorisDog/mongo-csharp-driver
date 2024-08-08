@@ -14,12 +14,9 @@
 */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Servers;
@@ -28,17 +25,19 @@ using Xunit;
 
 namespace MongoDB.Driver.Core.Bindings
 {
-    public class SingleServerReadWriteBindingTests
+    public class SingleServerReadBindingTests
     {
         [Fact]
         public void constructor_should_initialize_instance()
         {
             var server = new Mock<IServer>().Object;
+            var readPreference = ReadPreference.Primary;
             var session = new Mock<ICoreSessionHandle>().Object;
 
-            var result = new SingleServerReadWriteBinding(server, session);
+            var result = new SingleServerReadBinding(server, readPreference, session);
 
             result._disposed().Should().BeFalse();
+            result.ReadPreference.Should().BeSameAs(readPreference);
             result._server().Should().BeSameAs(server);
             result.Session.Should().BeSameAs(session);
         }
@@ -46,20 +45,34 @@ namespace MongoDB.Driver.Core.Bindings
         [Fact]
         public void constructor_should_throw_when_server_is_null()
         {
+            var readPreference = ReadPreference.Primary;
             var session = new Mock<ICoreSessionHandle>().Object;
 
-            var exception = Record.Exception(() => new SingleServerReadWriteBinding(null, session));
+            var exception = Record.Exception(() => new SingleServerReadBinding(null, readPreference, session));
 
             var e = exception.Should().BeOfType<ArgumentNullException>().Subject;
             e.ParamName.Should().Be("server");
         }
 
         [Fact]
+        public void constructor_should_throw_when_readPreference_is_null()
+        {
+            var server = new Mock<IServer>().Object;
+            var session = new Mock<ICoreSessionHandle>().Object;
+
+            var exception = Record.Exception(() => new SingleServerReadBinding(server, null, session));
+
+            var e = exception.Should().BeOfType<ArgumentNullException>().Subject;
+            e.ParamName.Should().Be("readPreference");
+        }
+
+        [Fact]
         public void constructor_should_throw_when_session_is_null()
         {
             var server = new Mock<IServer>().Object;
+            var readPreference = ReadPreference.Primary;
 
-            var exception = Record.Exception(() => new SingleServerReadWriteBinding(server, null));
+            var exception = Record.Exception(() => new SingleServerReadBinding(server, readPreference, null));
 
             var e = exception.Should().BeOfType<ArgumentNullException>().Subject;
             e.ParamName.Should().Be("session");
@@ -68,11 +81,12 @@ namespace MongoDB.Driver.Core.Bindings
         [Fact]
         public void ReadPreference_should_return_expected_result()
         {
-            var subject = CreateSubject();
+            var readPreference = ReadPreference.Secondary;
+            var subject = CreateSubject(readPreference: readPreference);
 
             var result = subject.ReadPreference;
 
-            result.Should().Be(ReadPreference.Primary);
+            result.Should().BeSameAs(readPreference);
         }
 
         [Fact]
@@ -83,7 +97,7 @@ namespace MongoDB.Driver.Core.Bindings
 
             var result = subject.Session;
 
-            result.Should().Be(session);
+            result.Should().BeSameAs(session);
         }
 
         [Fact]
@@ -164,87 +178,45 @@ namespace MongoDB.Driver.Core.Bindings
             e.ObjectName.Should().Be(subject.GetType().FullName);
         }
 
-        [Theory]
-        [ParameterAttributeData]
-        public void GetWriteChannelSource_should_return_expected_result(
-            [Values(false, true)] bool async)
-        {
-            var mockSession = new Mock<ICoreSessionHandle>();
-            var subject = CreateSubject(session: mockSession.Object);
-            using var cancellationTokenSource = new CancellationTokenSource();
-            var cancellationToken = cancellationTokenSource.Token;
-
-            var forkedSession = new Mock<ICoreSessionHandle>().Object;
-            mockSession.Setup(m => m.Fork()).Returns(forkedSession);
-
-            IChannelSourceHandle result;
-            if (async)
-            {
-                result = subject.GetWriteChannelSourceAsync(cancellationToken).GetAwaiter().GetResult();
-            }
-            else
-            {
-                result = subject.GetWriteChannelSource(cancellationToken);
-            }
-
-            var newHandle = result.Should().BeOfType<ChannelSourceHandle>().Subject;
-            var referenceCounted = newHandle._reference();
-            var source = referenceCounted.Instance.Should().BeOfType<ServerChannelSource>().Subject;
-            source.Session.Should().BeSameAs(forkedSession);
-        }
-
-        [Theory]
-        [ParameterAttributeData]
-        public void GetWriteChannelSource_should_throw_when_disposed(
-            [Values(false, true)] bool async)
-        {
-            var subject = CreateDisposedSubject();
-            using var cancellationTokenSource = new CancellationTokenSource();
-            var cancellationToken = cancellationTokenSource.Token;
-
-            var exception = Record.Exception(() =>
-            {
-                if (async)
-                {
-                    subject.GetWriteChannelSourceAsync(cancellationToken).GetAwaiter().GetResult();
-                }
-                else
-                {
-                    subject.GetWriteChannelSource(cancellationToken);
-                }
-            });
-
-            var e = exception.Should().BeOfType<ObjectDisposedException>().Subject;
-            e.ObjectName.Should().Be(subject.GetType().FullName);
-        }
-
         // private methods
-        private SingleServerReadWriteBinding CreateDisposedSubject()
+        private SingleServerReadBinding CreateDisposedSubject()
         {
             var subject = CreateSubject();
             subject.Dispose();
             return subject;
         }
 
-        private SingleServerReadWriteBinding CreateSubject(IServer server = null, ICoreSessionHandle session = null)
+        private SingleServerReadBinding CreateSubject(IServer server = null, ReadPreference readPreference = null, ICoreSessionHandle session = null)
         {
-            return new SingleServerReadWriteBinding(
-                server ?? new Mock<IServer>().Object,
+            return new SingleServerReadBinding(
+                server ?? CreateMockServer().Object,
+                readPreference ?? ReadPreference.Primary,
                 session ?? new Mock<ICoreSessionHandle>().Object);
+        }
+
+        private Mock<IServer> CreateMockServer()
+        {
+            var mockServer = new Mock<IServer>();
+            mockServer.Setup(s => s.Description).Returns(new ServerDescription(
+                new ServerId(new Clusters.ClusterId(), new DnsEndPoint("localhost", 20017)),
+                new DnsEndPoint("localhost", 20017),
+                state: ServerState.Connected));
+
+            return mockServer;
         }
     }
 
-    public static class SingleServerReadWriteBindingReflector
+    internal static class SingleServerReadBindingReflector
     {
-        public static bool _disposed(this SingleServerReadWriteBinding obj)
+        public static bool _disposed(this SingleServerReadBinding obj)
         {
-            var fieldInfo = typeof(SingleServerReadWriteBinding).GetField("_disposed", BindingFlags.NonPublic | BindingFlags.Instance);
+            var fieldInfo = typeof(SingleServerReadBinding).GetField("_disposed", BindingFlags.NonPublic | BindingFlags.Instance);
             return (bool)fieldInfo.GetValue(obj);
         }
 
-        public static IServer _server(this SingleServerReadWriteBinding obj)
+        public static IServer _server(this SingleServerReadBinding obj)
         {
-            var fieldInfo = typeof(SingleServerReadWriteBinding).GetField("_server", BindingFlags.NonPublic | BindingFlags.Instance);
+            var fieldInfo = typeof(SingleServerReadBinding).GetField("_server", BindingFlags.NonPublic | BindingFlags.Instance);
             return (IServer)fieldInfo.GetValue(obj);
         }
     }
