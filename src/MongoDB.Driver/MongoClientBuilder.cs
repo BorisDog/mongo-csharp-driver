@@ -1,6 +1,22 @@
-﻿using System.Collections.Generic;
+﻿/* Copyright 2010-present MongoDB Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Driver.Builders;
+using MongoDB.Driver.Configuration;
 using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events;
@@ -11,7 +27,7 @@ namespace MongoDB.Driver
     /// <summary>
     ///  <see cref="IMongoClient"/> builder.
     /// </summary>
-    public sealed record MongoClientBuilder
+    public sealed record MongoClientBuilder : IMongoClientOptions
     {
         /// <summary>
         /// Gets or sets whether to relax TLS constraints as much as possible.
@@ -69,7 +85,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the library info.
         /// </summary>
-        public LibraryInfo LibraryInfo { get; init; }
+        public LibraryInfoOptions LibraryInfoOptions { get; init; }
 
         /// <summary>
         /// Indicates whether load balanced mode is used.
@@ -77,9 +93,9 @@ namespace MongoDB.Driver
         public bool LoadBalanced { get; init; }
 
         /// <summary>
-        /// Gets the logging settings.
+        /// Gets the logging options.
         /// </summary>
-        public LoggingSettings LoggingSettings { get; init; }
+        public LoggingOptions LoggingOptions { get; init; }
 
         /// <summary>
         /// Gets the read concern.

@@ -89,4 +89,12 @@ namespace MongoDB.Driver.Builders
             return builder with { EventSubscribers = subscribers };
         }
     }
+
+    /// <summary>
+    /// <see cref="MongoClientBuilder"/> extensions.
+    /// </summary>
+    public static class MongoClientBuilderCacheExtensions
+    {
+
+    }
 }

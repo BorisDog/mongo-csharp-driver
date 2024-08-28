@@ -176,7 +176,7 @@ namespace MongoDB.Driver.Builders
             MaxConnectionPoolSize = MongoInternalDefaults.ConnectionPool.MaxConnectionPoolSize;
             MinConnectionPoolSize = MongoInternalDefaults.ConnectionPool.MinConnectionPoolSize;
             WaitQueueTimeout = MongoInternalDefaults.ConnectionPool.WaitQueueTime;
-        }  
+        }
 
         /// <summary>
         /// Gets the max connecting.

@@ -19,6 +19,23 @@ using Microsoft.Extensions.Logging;
 namespace MongoDB.Driver.Core.Configuration
 {
     /// <summary>
+    /// Represents the logging options.
+    /// </summary>
+    public sealed record LoggingOptions
+    {
+        /// <summary>
+        /// Gets the logger factory.
+        /// </summary>
+        [CLSCompliant(false)]
+        public ILoggerFactory LoggerFactory { get; }
+
+        /// <summary>
+        /// Gets the maximum document size in chars.
+        /// </summary>
+        public int MaxDocumentSize { get; }
+    }
+
+    /// <summary>
     /// Represents the settings for logging.
     /// </summary>
     public sealed class LoggingSettings : IEquatable<LoggingSettings>

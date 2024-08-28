@@ -26,7 +26,7 @@ namespace MongoDB.Driver
             public const int MaxDocumentSize = 1000;
         }
 
-        public static class  ServerSettings
+        public static class ServerSettings
         {
             public static TimeSpan ConnectTimeout { get; } = TimeSpan.FromSeconds(30);
             public static TimeSpan LocalThreshold { get; } = TimeSpan.FromMilliseconds(15);

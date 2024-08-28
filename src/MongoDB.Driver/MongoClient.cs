@@ -39,26 +39,51 @@ namespace MongoDB.Driver
         private readonly AutoEncryptionLibMongoCryptController _libMongoCryptController;
         private readonly LinqProvider _linqProvider;
         private readonly IOperationExecutor _operationExecutor;
-        private readonly MongoClientSettings _settings;
+        private readonly IMongoClientOptions _options;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the MongoClient class.
         /// </summary>
         public MongoClient()
-            : this(new MongoClientSettings())
+            : this(new MongoClientBuilder())
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the MongoClient class.
         /// </summary>
+        /// <param name="options">The options.</param>
+        internal MongoClient(IMongoClientOptions options)
+        {
+            _options = Ensure.IsNotNull(options, nameof(options));
+
+            // TODO BD remove
+            //_linqProvider = _options.LinqProvider;
+
+            _cluster = _options.ClusterSource.GetOrCreateCluster(_options.ToClusterKey());
+            _operationExecutor = new OperationExecutor(this);
+
+            // TODO BD
+            //if (options.AutoEncryptionOptions != null)
+            //{
+            //    _libMongoCryptController = AutoEncryptionLibMongoCryptController.Create(
+            //        this,
+            //        _cluster.CryptClient,
+            //        options.AutoEncryptionOptions);
+            //}
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the MongoClient class.
+        /// </summary>
         /// <param name="settings">The settings.</param>
+        [Obsolete("This ctor will be remove from public API in a later release. Please use MongoClientBuilder for constructing IMongoClient")]
         public MongoClient(MongoClientSettings settings)
         {
-            _settings = Ensure.IsNotNull(settings, nameof(settings)).FrozenCopy();
-            _linqProvider = _settings.LinqProvider;
-            _cluster = ClusterRegistry.Instance.GetOrCreateCluster(_settings.ToClusterKey());
+            _options = Ensure.IsNotNull(settings, nameof(settings)).FrozenCopy();
+            _linqProvider = _options.LinqProvider;
+            _cluster = ClusterRegistry.Instance.GetOrCreateCluster(settings.ToClusterKey());
             _operationExecutor = new OperationExecutor(this);
             if (settings.AutoEncryptionOptions != null)
             {
@@ -105,7 +130,7 @@ namespace MongoDB.Driver
         /// <inheritdoc/>
         public sealed override MongoClientSettings Settings
         {
-            get { return _settings; }
+            get { return _options; }
         }
 
         // internal properties
@@ -115,7 +140,7 @@ namespace MongoDB.Driver
         // internal methods
         internal void ConfigureAutoEncryptionMessageEncoderSettings(MessageEncoderSettings messageEncoderSettings)
         {
-            var autoEncryptionOptions = _settings.AutoEncryptionOptions;
+            var autoEncryptionOptions = _options.AutoEncryptionOptions;
             if (autoEncryptionOptions != null)
             {
                 if (!autoEncryptionOptions.BypassAutoEncryption)
@@ -140,7 +165,7 @@ namespace MongoDB.Driver
             var messageEncoderSettings = GetMessageEncoderSettings();
             var operation = new DropDatabaseOperation(new DatabaseNamespace(name), messageEncoderSettings)
             {
-                WriteConcern = _settings.WriteConcern
+                WriteConcern = _options.WriteConcern
             };
             ExecuteWriteOperation(session, operation, cancellationToken);
         }
@@ -158,7 +183,7 @@ namespace MongoDB.Driver
             var messageEncoderSettings = GetMessageEncoderSettings();
             var operation = new DropDatabaseOperation(new DatabaseNamespace(name), messageEncoderSettings)
             {
-                WriteConcern = _settings.WriteConcern
+                WriteConcern = _options.WriteConcern
             };
             return ExecuteWriteOperationAsync(session, operation, cancellationToken);
         }
@@ -170,7 +195,7 @@ namespace MongoDB.Driver
                 new MongoDatabaseSettings() :
                 settings.Clone();
 
-            settings.ApplyDefaultValues(_settings);
+            settings.ApplyDefaultValues(_options);
 
             return new MongoDatabaseImpl(this, new DatabaseNamespace(name), settings, _cluster, _operationExecutor);
         }
@@ -436,7 +461,7 @@ namespace MongoDB.Driver
                 Comment = options.Comment,
                 Filter = options.Filter?.Render(BsonDocumentSerializer.Instance, BsonSerializer.SerializerRegistry, _linqProvider),
                 NameOnly = options.NameOnly,
-                RetryRequested = _settings.RetryReads
+                RetryRequested = _options.RetryReads
             };
         }
 
@@ -455,7 +480,7 @@ namespace MongoDB.Driver
 
         private IReadBindingHandle CreateReadBinding(IClientSessionHandle session)
         {
-            var readPreference = _settings.ReadPreference;
+            var readPreference = _options.ReadPreference;
             if (session.IsInTransaction && readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
             {
                 throw new InvalidOperationException("Read preference in a transaction must be primary.");
@@ -479,9 +504,9 @@ namespace MongoDB.Driver
                 pipeline,
                 _linqProvider,
                 options,
-                _settings.ReadConcern,
+                _options.ReadConcern,
                 GetMessageEncoderSettings(),
-                _settings.RetryReads);
+                _options.RetryReads);
         }
 
         private TResult ExecuteReadOperation<TResult>(IClientSessionHandle session, IReadOperation<TResult> operation, CancellationToken cancellationToken = default(CancellationToken))
@@ -520,13 +545,13 @@ namespace MongoDB.Driver
         {
             var messageEncoderSettings = new MessageEncoderSettings
             {
-                { MessageEncoderSettingsName.ReadEncoding, _settings.ReadEncoding ?? Utf8Encodings.Strict },
-                { MessageEncoderSettingsName.WriteEncoding, _settings.WriteEncoding ?? Utf8Encodings.Strict }
+                { MessageEncoderSettingsName.ReadEncoding, _options.ReadEncoding ?? Utf8Encodings.Strict },
+                { MessageEncoderSettingsName.WriteEncoding, _options.WriteEncoding ?? Utf8Encodings.Strict }
             };
 #pragma warning disable 618
             if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
             {
-                messageEncoderSettings.Add(MessageEncoderSettingsName.GuidRepresentation, _settings.GuidRepresentation);
+                messageEncoderSettings.Add(MessageEncoderSettingsName.GuidRepresentation, _options.GuidRepresentation);
             }
 #pragma warning restore 618
 
@@ -541,7 +566,7 @@ namespace MongoDB.Driver
 
             ICoreSessionHandle coreSession;
 #pragma warning disable 618
-            var areMultipleUsersAuthenticated = _settings.Credentials.Count() > 1;
+            var areMultipleUsersAuthenticated = _options.Credentials.Count() > 1;
 #pragma warning restore
             if (!areMultipleUsersAuthenticated)
             {
