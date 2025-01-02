@@ -14,7 +14,6 @@
 */
 
 using System;
-using System.Linq;
 using System.Runtime.InteropServices;
 using MongoDB.Bson.ObjectModel;
 
@@ -48,7 +47,7 @@ namespace MongoDB.Bson.Serialization
                     }
                     else
                     {
-                        throw new NotSupportedException("Little Endian architecture is not supported yet.");
+                        throw new NotSupportedException("Bson Vector data is not supported on Big Endian architecture yet.");
                     }
                     break;
                 case BsonVectorDataType.Int8:
@@ -81,57 +80,51 @@ namespace MongoDB.Bson.Serialization
             return (vectorData.Slice(2), paddingSizeBits, vectorDataType);
         }
 
-        public static BsonVector<T> CreateBsonVector<T>(T[] elements, byte padding, BsonVectorDataType vectorDataType)
+        private static BsonVector<T> CreateBsonVector<T>(T[] elements, byte padding, BsonVectorDataType vectorDataType)
             where T : struct
         {
             switch (vectorDataType)
             {
                 case BsonVectorDataType.Float32:
                     {
-                        if (elements is not float[] floatArray)
-                        {
-                            throw new InvalidOperationException($"Type {typeof(T)} is not supported with {vectorDataType} vector type.");
-                        }
-
-                        return new BsonVectorFloat32(floatArray) as BsonVector<T>;
+                        return new BsonVectorFloat32(AsTypeOrThrow<float>()) as BsonVector<T>;
                     }
                 case BsonVectorDataType.Int8:
                     {
-                        if (elements is not byte[] byteArray)
-                        {
-                            throw new InvalidOperationException($"Type {typeof(T)} is not supported with {vectorDataType} vector type.");
-                        }
-
-                        return new BsonVectorInt8(byteArray) as BsonVector<T>;
+                        return new BsonVectorInt8(AsTypeOrThrow<byte>()) as BsonVector<T>;
                     }
                 case BsonVectorDataType.PackedBit:
                     {
-                        if (elements is not byte[] byteArray)
-                        {
-                            throw new InvalidOperationException($"Type {typeof(T)} is not supported with {vectorDataType} vector type.");
-                        }
-
-                        return new BsonVectorPackedBit(byteArray, padding) as BsonVector<T>;
+                        return new BsonVectorPackedBit(AsTypeOrThrow<byte>(), padding) as BsonVector<T>;
                     }
                 default:
                     throw new NotSupportedException($"Vector data type {vectorDataType} is not supported");
+            }
+
+            R[] AsTypeOrThrow<R>()
+            {
+                if (elements is not R[] result)
+                {
+                    throw new InvalidOperationException($"Type {typeof(T)} is not supported with {vectorDataType} vector type.");
+                }
+
+                return result;
             }
         }
 
         public static void ValidateDataType<T>(BsonVectorDataType bsonVectorDataType)
         {
-            Type[] supportedTypes = bsonVectorDataType switch
+            var supportedType = bsonVectorDataType switch
             {
-                BsonVectorDataType.Float32 => [typeof(float)],
-                BsonVectorDataType.Int8 => [typeof(byte)],
-                BsonVectorDataType.PackedBit => [typeof(byte)],
+                BsonVectorDataType.Float32 => typeof(float),
+                BsonVectorDataType.Int8 => typeof(byte),
+                BsonVectorDataType.PackedBit => typeof(byte),
                 _ => throw new ArgumentOutOfRangeException(nameof(bsonVectorDataType), bsonVectorDataType, "Unsupported vector datatype.")
             };
 
-            if (!supportedTypes.Contains(typeof(T)))
+            if (supportedType != typeof(T))
             {
-                var supportedTypesList = string.Join(",", supportedTypes.Select(t => t.ToString()));
-                throw new InvalidOperationException($"Type {typeof(T)} is not supported with {bsonVectorDataType} vector type. Supported types are [{supportedTypesList}].");
+                throw new InvalidOperationException($"Type {typeof(T)} is not supported with {bsonVectorDataType} vector type. Supported types are [{supportedType}].");
             }
         }
     }
