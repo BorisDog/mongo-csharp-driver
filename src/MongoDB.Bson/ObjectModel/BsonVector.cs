@@ -71,7 +71,8 @@ namespace MongoDB.Bson
     }
 
     /// <summary>
-    /// Represents a vector of bit values.
+    /// Represents a vector of 0/1 values.
+    /// The vector values are packed into groups of 8 (a byte).
     /// </summary>
     public sealed class BsonVectorPackedBit : BsonVector<byte>
     {
