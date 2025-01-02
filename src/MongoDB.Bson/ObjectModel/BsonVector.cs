@@ -83,7 +83,7 @@ namespace MongoDB.Bson
         {
             if (padding < 0 || padding > 7)
             {
-                throw new ArgumentOutOfRangeException(nameof(padding), padding, "Padding is expected to be in the range of [0..7]");
+                throw new ArgumentOutOfRangeException(nameof(padding), padding, "Padding is expected to be in the range of [0..7].");
             }
 
             if (padding > 0 && vector.Length == 0)

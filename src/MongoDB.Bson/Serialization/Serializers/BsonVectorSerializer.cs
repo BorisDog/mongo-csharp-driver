@@ -90,7 +90,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// <summary>
     /// Represents a base class for serializers to/from collection of <typeparamref name="TItem"/>.
     /// </summary>
-    /// <typeparam name="TItemCollection">The collection type."/>.</typeparam>
+    /// <typeparam name="TItemCollection">The collection type.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
     public abstract class BsonVectorToCollectionSerializer<TItemCollection, TItem> : BsonVectorSerializerBase<TItemCollection, TItem>
          where TItem : struct
