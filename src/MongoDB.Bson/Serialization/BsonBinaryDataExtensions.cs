@@ -24,17 +24,17 @@ namespace MongoDB.Bson.Serialization
     public static class BsonBinaryDataExtensions
     {
         /// <summary>
-        /// Converts <see cref="BsonBinaryData"/> to <see cref="BsonVector{T}"/>.
+        /// Converts <see cref="BsonBinaryData"/> to <see cref="BsonVectorBase{T}"/>.
         /// </summary>
         /// <typeparam name="T">Data type of the Bson vector.</typeparam>
         /// <param name="binaryData">The binary data.</param>
-        /// <returns>A <see cref="BsonVector{T}"/> instance.</returns>
-        public static BsonVector<T> ToBsonVector<T>(this BsonBinaryData binaryData)
+        /// <returns>A <see cref="BsonVectorBase{T}"/> instance.</returns>
+        public static BsonVectorBase<T> ToBsonVector<T>(this BsonBinaryData binaryData)
             where T : struct
         {
             EnsureBsonVectorDataType(binaryData);
 
-            return BsonVectorReader.ReadBsonVector<T>(binaryData.Bytes);
+            return BsonVectorReader.BsonVectorFromVectorData<T>(binaryData.Bytes);
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace MongoDB.Bson.Serialization
         {
             EnsureBsonVectorDataType(binaryData);
 
-            return BsonVectorReader.ReadBsonVectorAsArray<T>(binaryData.Bytes);
+            return BsonVectorReader.BsonVectorFromVectorDataAsArray<T>(binaryData.Bytes);
         }
 
         private static void EnsureBsonVectorDataType(BsonBinaryData binaryData)

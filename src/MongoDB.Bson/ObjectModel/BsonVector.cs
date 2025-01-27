@@ -21,13 +21,13 @@ namespace MongoDB.Bson
     /// <summary>
     /// Represents a BSON vector.
     /// </summary>
-    public abstract class BsonVector<T>
+    public abstract class BsonVectorBase<T>
          where T : struct
     {
         /// <summary>
         /// Initializes a new instance of the BsonVector class.
         /// </summary>
-        public BsonVector(ReadOnlyMemory<T> vector, BsonVectorDataType dataType)
+        public BsonVectorBase(ReadOnlyMemory<T> vector, BsonVectorDataType dataType)
         {
             DataType = dataType;
             Vector = vector;
@@ -47,7 +47,7 @@ namespace MongoDB.Bson
     /// <summary>
     /// Represents a vector of <see cref="float"/> values.
     /// </summary>
-    public sealed class BsonVectorFloat32 : BsonVector<float>
+    public sealed class BsonVectorFloat32 : BsonVectorBase<float>
     {
         /// <summary>
         /// Initializes a new instance of the BsonVectorFloat32 class.
@@ -60,7 +60,7 @@ namespace MongoDB.Bson
     /// <summary>
     /// Represents a vector of <see cref="byte"/> values.
     /// </summary>
-    public sealed class BsonVectorInt8 : BsonVector<byte>
+    public sealed class BsonVectorInt8 : BsonVectorBase<byte>
     {
         /// <summary>
         /// Initializes a new instance of the BsonVectorInt8 class.
@@ -74,7 +74,7 @@ namespace MongoDB.Bson
     /// Represents a vector of 0/1 values.
     /// The vector values are packed into groups of 8 (a byte).
     /// </summary>
-    public sealed class BsonVectorPackedBit : BsonVector<byte>
+    public sealed class BsonVectorPackedBit : BsonVectorBase<byte>
     {
         /// <summary>
         /// Initializes a new instance of the BsonVectorPackedBit class.
