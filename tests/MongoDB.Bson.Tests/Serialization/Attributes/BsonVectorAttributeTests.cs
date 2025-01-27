@@ -80,6 +80,16 @@ namespace MongoDB.Bson.Tests.Serialization.Attributes
             exception.Message.Should().Be($"Type {memberInfo.PropertyType} is not supported for a binary vector.");
         }
 
+        [Fact]
+        public void BsonVectorSerializer_should_be_used_for_bsonvector_without_attribute()
+        {
+            var classMap = BsonClassMap.LookupClassMap(typeof(BsonVectorNoAttributeHolder));
+
+            AssertSerializer<BsonVectorSerializer<BsonVectorInt8, byte>, BsonVectorInt8, byte>(classMap, nameof(BsonVectorNoAttributeHolder.ValuesInt8), BsonVectorDataType.Int8);
+            AssertSerializer<BsonVectorSerializer<BsonVectorPackedBit, byte>, BsonVectorPackedBit, byte>(classMap, nameof(BsonVectorNoAttributeHolder.ValuesPackedBit), BsonVectorDataType.PackedBit);
+            AssertSerializer<BsonVectorSerializer<BsonVectorFloat32, float>, BsonVectorFloat32, float>(classMap, nameof(BsonVectorNoAttributeHolder.ValuesFloat), BsonVectorDataType.Float32);
+        }
+
         private void AssertSerializer<TSerializer, TCollection, TITem>(BsonClassMap classMap, string memberName, BsonVectorDataType bsonVectorDataType)
             where TSerializer : BsonVectorSerializerBase<TCollection, TITem>
             where TITem : struct
@@ -113,6 +123,15 @@ namespace MongoDB.Bson.Tests.Serialization.Attributes
             public BsonVectorPackedBit ValuesPackedBit { get; set; }
 
             [BsonVector(BsonVectorDataType.Float32)]
+            public BsonVectorFloat32 ValuesFloat { get; set; }
+        }
+
+        public class BsonVectorNoAttributeHolder
+        {
+            public BsonVectorInt8 ValuesInt8 { get; set; }
+
+            public BsonVectorPackedBit ValuesPackedBit { get; set; }
+
             public BsonVectorFloat32 ValuesFloat { get; set; }
         }
 

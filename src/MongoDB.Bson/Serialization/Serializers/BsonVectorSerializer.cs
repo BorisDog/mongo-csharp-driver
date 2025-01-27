@@ -44,17 +44,33 @@ namespace MongoDB.Bson.Serialization.Serializers
 
         /// <inheritdoc/>
         public override int GetHashCode() => 0;
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (object.ReferenceEquals(obj, null)) { return false; }
+            if (object.ReferenceEquals(this, obj)) { return true; }
+            return
+                base.Equals(obj) &&
+                obj is BsonVectorSerializerBase<TItemCollection, TItem> other &&
+                object.Equals(VectorDataType, other.VectorDataType);
+        }
     }
 
     /// <summary>
-    /// Represents a serializer for <see cref="BsonVector{TItem}"/>.
+    /// Represents a serializer for <see cref="BsonVectorBase{TItem}"/>.
     /// </summary>
-    /// <typeparam name="TItemCollection">The concrete type derived from <see cref="BsonVector{T}"/>.</typeparam>
+    /// <typeparam name="TItemCollection">The concrete type derived from <see cref="BsonVectorBase{T}"/>.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
     public sealed class BsonVectorSerializer<TItemCollection, TItem> : BsonVectorSerializerBase<TItemCollection, TItem>
-        where TItemCollection : BsonVector<TItem>
+        where TItemCollection : BsonVectorBase<TItem>
         where TItem : struct
     {
+        /// <summary>
+        /// Gets an instance of the <see cref="BsonVectorSerializerBase{TItemCollection, TItem}"/>.
+        /// </summary>
+        public static BsonVectorSerializer<TItemCollection, TItem> Instance { get; } = new BsonVectorSerializer<TItemCollection, TItem>(GetDataType());
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ReadonlyMemorySerializer{TItem}" /> class.
         /// </summary>
@@ -85,6 +101,15 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             context.Writer.WriteBinaryData(binaryData);
         }
+
+        private static BsonVectorDataType GetDataType() =>
+            typeof(TItemCollection) switch
+            {
+                _ when typeof(TItemCollection) == typeof(BsonVectorFloat32) => BsonVectorDataType.Float32,
+                _ when typeof(TItemCollection) == typeof(BsonVectorInt8) => BsonVectorDataType.Int8,
+                _ when typeof(TItemCollection) == typeof(BsonVectorPackedBit) => BsonVectorDataType.PackedBit,
+                _ => throw new NotSupportedException($"{typeof(TItemCollection)} are not supported by {nameof(BsonVectorSerializer<TItemCollection, TItem>)}.")
+            };
     }
 
     /// <summary>
@@ -101,7 +126,6 @@ namespace MongoDB.Bson.Serialization.Serializers
         public BsonVectorToCollectionSerializer(BsonVectorDataType bsonVectorDataType) :
             base(bsonVectorDataType)
         {
-
         }
 
         /// <inheritdoc/>
@@ -131,7 +155,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             }
 
             var vectorData = GetSpan(value);
-            var bytes = BsonVectorWriter.WriteVectorData(vectorData, VectorDataType, padding);
+            var bytes = BsonVectorWriter.VectorDataToBytes(vectorData, VectorDataType, padding);
             var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.Vector);
 
             context.Writer.WriteBinaryData(binaryData);

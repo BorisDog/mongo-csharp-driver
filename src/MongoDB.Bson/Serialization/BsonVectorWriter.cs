@@ -21,7 +21,7 @@ namespace MongoDB.Bson.Serialization
 {
     internal static class BsonVectorWriter
     {
-        public static byte[] WriteBsonVector<T>(BsonVector<T> bsonVector)
+        public static byte[] BsonVectorToBytes<T>(BsonVectorBase<T> bsonVector)
             where T : struct
         {
             byte padding = 0;
@@ -30,12 +30,17 @@ namespace MongoDB.Bson.Serialization
                 padding = bsonVectorPackedBit.Padding;
             }
 
-            return WriteVectorData(bsonVector.Vector.Span, bsonVector.DataType, padding);
+            return VectorDataToBytes(bsonVector.Vector.Span, bsonVector.DataType, padding);
         }
 
-        public static byte[] WriteVectorData<T>(ReadOnlySpan<T> vectorData, BsonVectorDataType bsonVectorDataType, byte padding)
+        public static byte[] VectorDataToBytes<T>(ReadOnlySpan<T> vectorData, BsonVectorDataType bsonVectorDataType, byte padding)
             where T : struct
         {
+            if (!BitConverter.IsLittleEndian)
+            {
+                throw new NotSupportedException("Bson Vector data is not supported on Big Endian architecture yet.");
+            }
+
             var vectorDataBytes = MemoryMarshal.Cast<T, byte>(vectorData);
             byte[] result = [(byte)bsonVectorDataType, padding, .. vectorDataBytes];
 

@@ -21,15 +21,15 @@ namespace MongoDB.Bson.Serialization
 {
     internal static class BsonVectorReader
     {
-        public static BsonVector<T> ReadBsonVector<T>(ReadOnlyMemory<byte> vectorData)
+        public static BsonVectorBase<T> BsonVectorFromVectorData<T>(ReadOnlyMemory<byte> vectorData)
             where T : struct
         {
-            var (elements, padding, vectorDataType) = ReadBsonVectorAsArray<T>(vectorData);
+            var (elements, padding, vectorDataType) = BsonVectorFromVectorDataAsArray<T>(vectorData);
 
             return CreateBsonVector(elements, padding, vectorDataType);
         }
 
-        public static (T[] Elements, byte Padding, BsonVectorDataType vectorDataType) ReadBsonVectorAsArray<T>(ReadOnlyMemory<byte> vectorData)
+        public static (T[] Elements, byte Padding, BsonVectorDataType vectorDataType) BsonVectorFromVectorDataAsArray<T>(ReadOnlyMemory<byte> vectorData)
             where T : struct
         {
             var (vectorDataBytes, padding, vectorDataType) = ReadBsonVectorAsBytes(vectorData);
@@ -80,22 +80,22 @@ namespace MongoDB.Bson.Serialization
             return (vectorData.Slice(2), paddingSizeBits, vectorDataType);
         }
 
-        private static BsonVector<T> CreateBsonVector<T>(T[] elements, byte padding, BsonVectorDataType vectorDataType)
+        private static BsonVectorBase<T> CreateBsonVector<T>(T[] elements, byte padding, BsonVectorDataType vectorDataType)
             where T : struct
         {
             switch (vectorDataType)
             {
                 case BsonVectorDataType.Float32:
                     {
-                        return new BsonVectorFloat32(AsTypeOrThrow<float>()) as BsonVector<T>;
+                        return new BsonVectorFloat32(AsTypeOrThrow<float>()) as BsonVectorBase<T>;
                     }
                 case BsonVectorDataType.Int8:
                     {
-                        return new BsonVectorInt8(AsTypeOrThrow<byte>()) as BsonVector<T>;
+                        return new BsonVectorInt8(AsTypeOrThrow<byte>()) as BsonVectorBase<T>;
                     }
                 case BsonVectorDataType.PackedBit:
                     {
-                        return new BsonVectorPackedBit(AsTypeOrThrow<byte>(), padding) as BsonVector<T>;
+                        return new BsonVectorPackedBit(AsTypeOrThrow<byte>(), padding) as BsonVectorBase<T>;
                     }
                 default:
                     throw new NotSupportedException($"Vector data type {vectorDataType} is not supported");

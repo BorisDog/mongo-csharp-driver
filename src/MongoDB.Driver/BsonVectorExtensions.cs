@@ -13,12 +13,16 @@
 * limitations under the License.
 */
 
-namespace MongoDB.Bson.Serialization
+using System;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+
+namespace MongoDB.Driver
 {
     /// <summary>
     /// Contains extensions methods for <see cref="BsonVectorBase{T}"/>
     /// </summary>
-    public static class BsonVectorExtensions
+    public static class BsonVectorDriverExtensions
     {
         /// <summary>
         /// Converts <see cref="BsonVectorBase{T}"/> to <see cref="BsonBinaryData"/>.
@@ -26,13 +30,14 @@ namespace MongoDB.Bson.Serialization
         /// <typeparam name="T"></typeparam>
         /// <param name="bsonVector">The BSON vector.</param>
         /// <returns>A <see cref="BsonBinaryData"/> instance.</returns>
-        public static BsonBinaryData ToBsonBinaryData<T>(this BsonVectorBase<T> bsonVector)
-            where T : struct
-        {
-            var bytes = BsonVectorWriter.BsonVectorToBytes(bsonVector);
-            var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.Vector);
-
-            return binaryData;
-        }
+        public static QueryVector ToQueryVector<T>(this BsonVectorBase<T> bsonVector)
+            where T : struct =>
+            bsonVector switch
+            {
+                BsonVectorFloat32 bsonVectorFloat32 => new(bsonVectorFloat32.ToBsonBinaryData()),
+                BsonVectorInt8 bsonVectorInt8 => new(bsonVectorInt8.ToBsonBinaryData()),
+                BsonVectorPackedBit bsonVectorPackedBit => new(bsonVectorPackedBit.ToBsonBinaryData()),
+                _ => throw new InvalidOperationException($"Invalidate Bson Vector type {bsonVector?.GetType()}")
+            };
     }
 }
