@@ -39,22 +39,29 @@ namespace MongoDB.Driver.Tests.Search
             var atlasSearchUri = Environment.GetEnvironmentVariable("ATLAS_SEARCH");
             Ensure.IsNotNullOrEmpty(atlasSearchUri, nameof(atlasSearchUri));
 
+            var mongoClientSettings = MongoClientSettings.FromConnectionString(atlasSearchUri);
+            mongoClientSettings.ClusterSource = DisposingClusterSource.Instance;
+
             _mongoClient = new MongoClient(atlasSearchUri);
         }
 
         protected override void DisposeInternal() => _mongoClient.Dispose();
 
-        [Theory(Skip = "Shared BsonVector cluster not set. TODO BEFORE MERGE")]
+        [Theory]
         [MemberData(nameof(BsonVectorSearchTestData))]
         public void BsonVectorSearch<T>(BsonVectorBase<T> bsonVector, string fieldName)
             where T : struct
         {
             const int Limit = 5;
-            var collection = _mongoClient.GetDatabase("vectorSearch").GetCollection<BsonVectorSearchItem>("BinaryVectorTests");
+            var collection = _mongoClient.GetDatabase("csharpExtraTests").GetCollection<BsonVectorSearchItem>("binaryVectorTests");
 
             var options = new VectorSearchOptions<BsonVectorSearchItem>() { IndexName = "vector_search_index" };
 
-            var result = collection.Aggregate().VectorSearch(fieldName, bsonVector.ToQueryVector(), Limit).ToList();
+            var result = collection
+                .Aggregate()
+                .VectorSearch(fieldName, bsonVector.ToQueryVector(), Limit, options)
+                .Project<BsonVectorSearchItem>(Builders<BsonVectorSearchItem>.Projection.MetaVectorSearchScore(p => p.Score))
+                .ToList();
 
             result.Count.Should().Be(Limit);
             result.Should().BeInDescendingOrder(b => b.Score);
