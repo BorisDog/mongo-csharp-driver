@@ -53,9 +53,9 @@ namespace MongoDB.Bson.Serialization
                 { typeof(BsonTimestamp), BsonTimestampSerializer.Instance },
                 { typeof(BsonUndefined), BsonUndefinedSerializer.Instance },
                 { typeof(BsonValue), BsonValueSerializer.Instance },
-                { typeof(BsonVectorFloat32), BsonVectorSerializer<BsonVectorFloat32, float>.Instance },
-                { typeof(BsonVectorInt8), BsonVectorSerializer<BsonVectorInt8, byte>.Instance },
-                { typeof(BsonVectorPackedBit), BsonVectorSerializer<BsonVectorPackedBit, byte>.Instance },
+                { typeof(BsonVectorFloat32), BsonVectorSerializerBase.BsonVectorSerializerFloat32 },
+                { typeof(BsonVectorInt8), BsonVectorSerializerBase.BsonVectorSerializerInt8 },
+                { typeof(BsonVectorPackedBit), BsonVectorSerializerBase.BsonVectorSerializerPackedBit },
             };
         }
 

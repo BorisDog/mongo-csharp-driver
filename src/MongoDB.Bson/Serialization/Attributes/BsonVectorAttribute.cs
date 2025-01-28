@@ -48,58 +48,6 @@ namespace MongoDB.Bson.Serialization.Attributes
             memberMap.SetSerializer(serializer);
         }
 
-        private IBsonSerializer CreateSerializer(Type type)
-        {
-            // Arrays
-            if (type.IsArray)
-            {
-                var itemType = type.GetElementType();
-                var vectorSerializerType = typeof(BsonVectorArraySerializer<>).MakeGenericType(itemType);
-                var vectorSerializer = (IBsonSerializer)Activator.CreateInstance(vectorSerializerType, DataType);
-
-                return vectorSerializer;
-            }
-
-            // BsonVector
-            if (type == typeof(BsonVectorFloat32) ||
-                type == typeof(BsonVectorInt8) ||
-                type == typeof(BsonVectorPackedBit))
-            {
-                var vectorSerializerType = typeof(BsonVectorSerializer<,>).MakeGenericType(type, GetItemType(type.BaseType));
-                var vectorSerializer = (IBsonSerializer)Activator.CreateInstance(vectorSerializerType, DataType);
-
-                return vectorSerializer;
-            }
-
-            // Memory/ReadonlyMemory
-            var genericTypeDefinition = type.IsGenericType ? type.GetGenericTypeDefinition() : null;
-            if (genericTypeDefinition == typeof(Memory<>))
-            {
-                var vectorSerializerType = typeof(BsonVectorMemorySerializer<>).MakeGenericType(GetItemType(type));
-                var vectorSerializer = (IBsonSerializer)Activator.CreateInstance(vectorSerializerType, DataType);
-
-                return vectorSerializer;
-            }
-            else if (genericTypeDefinition == typeof(ReadOnlyMemory<>))
-            {
-                var vectorSerializerType = typeof(BsonVectorReadOnlyMemorySerializer<>).MakeGenericType(GetItemType(type));
-                var vectorSerializer = (IBsonSerializer)Activator.CreateInstance(vectorSerializerType, DataType);
-
-                return vectorSerializer;
-            }
-
-            throw new InvalidOperationException($"Type {type} is not supported for a binary vector.");
-
-            Type GetItemType(Type actualType)
-            {
-                var arguments = actualType.GetGenericArguments();
-                if (arguments.Length != 1)
-                {
-                    throw new InvalidOperationException($"Type {type} is not supported for a binary vector.");
-                }
-
-                return arguments[0];
-            }
-        }
+        private IBsonSerializer CreateSerializer(Type type) => BsonVectorSerializerBase.CreateSerializer(type, DataType);
     }
 }
