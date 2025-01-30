@@ -26,16 +26,16 @@ namespace MongoDB.Bson.Serialization.Serializers
         public static BsonVectorSerializer<BsonVectorPackedBit, byte> BsonVectorPackedBitSerializer { get; } = new BsonVectorSerializer<BsonVectorPackedBit, byte>(BsonVectorDataType.PackedBit);
 
         public static IBsonSerializer CreateArraySerializer(Type itemType, BsonVectorDataType bsonVectorDataType) =>
-            CreateSerializerInstance(typeof(BsonVectorArraySerializer<>).MakeGenericType(itemType), bsonVectorDataType);
+            CreateSerializerInstance(typeof(ArrayAsBsonVectorSerializer<>).MakeGenericType(itemType), bsonVectorDataType);
 
         public static IBsonSerializer CreateBsonVectorSerializer(Type bsonVectorType, Type itemType, BsonVectorDataType bsonVectorDataType) =>
             CreateSerializerInstance(typeof(BsonVectorSerializer<,>).MakeGenericType(bsonVectorType, itemType), bsonVectorDataType);
 
         public static IBsonSerializer CreateMemorySerializer(Type itemType, BsonVectorDataType bsonVectorDataType) =>
-            CreateSerializerInstance(typeof(BsonVectorMemorySerializer<>).MakeGenericType(itemType), bsonVectorDataType);
+            CreateSerializerInstance(typeof(MemoryAsBsonVectorSerializer<>).MakeGenericType(itemType), bsonVectorDataType);
 
         public static IBsonSerializer CreateReadonlyMemorySerializer(Type itemType, BsonVectorDataType bsonVectorDataType) =>
-            CreateSerializerInstance(typeof(BsonVectorReadOnlyMemorySerializer<>).MakeGenericType(itemType), bsonVectorDataType);
+            CreateSerializerInstance(typeof(ReadOnlyMemoryAsBsonVectorSerializer<>).MakeGenericType(itemType), bsonVectorDataType);
 
         public static IBsonSerializer CreateSerializer(Type type, BsonVectorDataType bsonVectorDataType)
         {
@@ -84,15 +84,15 @@ namespace MongoDB.Bson.Serialization.Serializers
     }
 
     /// <summary>
-    /// Represents a serializer for BSON vector to/from a given collection.
+    /// Represents a serializer for BSON vector to/from a given items container.
     /// </summary>
-    /// <typeparam name="TItemCollection">The collection type.</typeparam>
+    /// <typeparam name="TItemContainer">The items container, for example <see cref="BsonVectorBase{TItem}"/> or <see cref="Memory{TItem}"/>.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal abstract class BsonVectorSerializerBase<TItemCollection, TItem> : SerializerBase<TItemCollection>
+    internal abstract class BsonVectorSerializerBase<TItemContainer, TItem> : SerializerBase<TItemContainer>
          where TItem : struct
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="BsonVectorSerializerBase{TItemCollection, TItem}"/> class.
+        /// Initializes a new instance of the <see cref="BsonVectorSerializerBase{TItemContainer, TItem}"/> class.
         /// </summary>
         /// <param name="bsonVectorDataType">Type of the bson vector data.</param>
         public BsonVectorSerializerBase(BsonVectorDataType bsonVectorDataType)
@@ -117,7 +117,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (object.ReferenceEquals(this, obj)) { return true; }
             return
                 base.Equals(obj) &&
-                obj is BsonVectorSerializerBase<TItemCollection, TItem> other &&
+                obj is BsonVectorSerializerBase<TItemContainer, TItem> other &&
                 object.Equals(VectorDataType, other.VectorDataType);
         }
 
@@ -138,10 +138,10 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// <summary>
     /// Represents a serializer for <see cref="BsonVectorBase{TItem}"/>.
     /// </summary>
-    /// <typeparam name="TItemCollection">The concrete type derived from <see cref="BsonVectorBase{T}"/>.</typeparam>
+    /// <typeparam name="TItemContainer">The concrete type derived from <see cref="BsonVectorBase{TItemContainer}"/>.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class BsonVectorSerializer<TItemCollection, TItem> : BsonVectorSerializerBase<TItemCollection, TItem>
-        where TItemCollection : BsonVectorBase<TItem>
+    internal sealed class BsonVectorSerializer<TItemContainer, TItem> : BsonVectorSerializerBase<TItemContainer, TItem>
+        where TItemContainer : BsonVectorBase<TItem>
         where TItem : struct
     {
         /// <summary>
@@ -153,14 +153,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public override sealed TItemCollection Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+        public override sealed TItemContainer Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
             var binaryData = ReadAndValidateBsonBinaryData(context.Reader);
-            return (TItemCollection)binaryData.ToBsonVector<TItem>();
+            return (TItemContainer)binaryData.ToBsonVector<TItem>();
         }
 
         /// <inheritdoc/>
-        public override sealed void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TItemCollection bsonVector)
+        public override sealed void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TItemContainer bsonVector)
         {
             var binaryData = bsonVector.ToBsonBinaryData();
 
@@ -168,33 +168,33 @@ namespace MongoDB.Bson.Serialization.Serializers
         }
 
         private static BsonVectorDataType GetDataType() =>
-            typeof(TItemCollection) switch
+            typeof(TItemContainer) switch
             {
-                _ when typeof(TItemCollection) == typeof(BsonVectorFloat32) => BsonVectorDataType.Float32,
-                _ when typeof(TItemCollection) == typeof(BsonVectorInt8) => BsonVectorDataType.Int8,
-                _ when typeof(TItemCollection) == typeof(BsonVectorPackedBit) => BsonVectorDataType.PackedBit,
-                _ => throw new NotSupportedException($"{typeof(TItemCollection)} are not supported by {nameof(BsonVectorSerializer<TItemCollection, TItem>)}.")
+                _ when typeof(TItemContainer) == typeof(BsonVectorFloat32) => BsonVectorDataType.Float32,
+                _ when typeof(TItemContainer) == typeof(BsonVectorInt8) => BsonVectorDataType.Int8,
+                _ when typeof(TItemContainer) == typeof(BsonVectorPackedBit) => BsonVectorDataType.PackedBit,
+                _ => throw new NotSupportedException($"{typeof(TItemContainer)} are not supported by {nameof(BsonVectorSerializer<TItemContainer, TItem>)}.")
             };
     }
 
     /// <summary>
     /// Represents a base class for serializers to/from collection of <typeparamref name="TItem"/>.
     /// </summary>
-    /// <typeparam name="TItemCollection">The collection type.</typeparam>
+    /// <typeparam name="TItemContainer">The collection type.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal abstract class BsonVectorToCollectionSerializer<TItemCollection, TItem> : BsonVectorSerializerBase<TItemCollection, TItem>
+    internal abstract class TItemContainerAsBsonVectorSerializer<TItemContainer, TItem> : BsonVectorSerializerBase<TItemContainer, TItem>
          where TItem : struct
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="BsonVectorToCollectionSerializer{TItemCollection, TItem}" /> class.
+        /// Initializes a new instance of the <see cref="TItemContainerAsBsonVectorSerializer{TItemContainer, TItem}" /> class.
         /// </summary>
-        public BsonVectorToCollectionSerializer(BsonVectorDataType bsonVectorDataType) :
+        public TItemContainerAsBsonVectorSerializer(BsonVectorDataType bsonVectorDataType) :
             base(bsonVectorDataType)
         {
         }
 
         /// <inheritdoc/>
-        public override sealed TItemCollection Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+        public override sealed TItemContainer Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
             var binaryData = ReadAndValidateBsonBinaryData(context.Reader);
             var (elements, padding, _) = binaryData.ToBsonVectorAsArray<TItem>();
@@ -208,52 +208,55 @@ namespace MongoDB.Bson.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public override sealed void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TItemCollection value)
+        public override sealed void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TItemContainer value)
         {
-            var vectorData = GetItemsSpan(value);
+            var vectorData = GetItemsContainerSpan(value);
             var bytes = BsonVectorWriter.WriteToBytes(vectorData, VectorDataType, 0);
             var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.Vector);
 
             context.Writer.WriteBinaryData(binaryData);
         }
 
-        private protected abstract TItemCollection CreateResult(TItem[] elements);
-        private protected abstract ReadOnlySpan<TItem> GetItemsSpan(TItemCollection data);
+        private protected abstract TItemContainer CreateResult(TItem[] elements);
+        private protected abstract ReadOnlySpan<TItem> GetItemsContainerSpan(TItemContainer data);
     }
 
     /// <summary>
     /// Represents a serializer for BSON vector to/from array of <typeparamref name="TItem"/>.
     /// </summary>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class BsonVectorArraySerializer<TItem> : BsonVectorToCollectionSerializer<TItem[], TItem>
+    internal sealed class ArrayAsBsonVectorSerializer<TItem> : TItemContainerAsBsonVectorSerializer<TItem[], TItem>
          where TItem : struct
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="BsonVectorArraySerializer{TItem}" /> class.
+        /// Initializes a new instance of the <see cref="ArrayAsBsonVectorSerializer{TItem}" /> class.
         /// </summary>
-        public BsonVectorArraySerializer(BsonVectorDataType bsonVectorDataType) : base(bsonVectorDataType)
+        public ArrayAsBsonVectorSerializer(BsonVectorDataType bsonVectorDataType) : base(bsonVectorDataType)
         {
         }
 
-        private protected override ReadOnlySpan<TItem> GetItemsSpan(TItem[] data) => data;
-        private protected override TItem[] CreateResult(TItem[] elements) => elements;
+        private protected override ReadOnlySpan<TItem> GetItemsContainerSpan(TItem[] data) =>
+            data;
+
+        private protected override TItem[] CreateResult(TItem[] elements) =>
+            elements;
     }
 
     /// <summary>
     /// Represents a serializer for BSON vector to/from <see cref="Memory{TItem}"/>
     /// </summary>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class BsonVectorMemorySerializer<TItem> : BsonVectorToCollectionSerializer<Memory<TItem>, TItem>
+    internal sealed class MemoryAsBsonVectorSerializer<TItem> : TItemContainerAsBsonVectorSerializer<Memory<TItem>, TItem>
          where TItem : struct
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="BsonVectorMemorySerializer{TItem}" /> class.
+        /// Initializes a new instance of the <see cref="MemoryAsBsonVectorSerializer{TItem}" /> class.
         /// </summary>
-        public BsonVectorMemorySerializer(BsonVectorDataType bsonVectorDataType) : base(bsonVectorDataType)
+        public MemoryAsBsonVectorSerializer(BsonVectorDataType bsonVectorDataType) : base(bsonVectorDataType)
         {
         }
 
-        private protected override ReadOnlySpan<TItem> GetItemsSpan(Memory<TItem> data) =>
+        private protected override ReadOnlySpan<TItem> GetItemsContainerSpan(Memory<TItem> data) =>
             data.Span;
 
         private protected override Memory<TItem> CreateResult(TItem[] elements) =>
@@ -264,17 +267,17 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// Represents a serializer for <see cref="ReadOnlyMemory{TItem}"/>.
     /// </summary>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class BsonVectorReadOnlyMemorySerializer<TItem> : BsonVectorToCollectionSerializer<ReadOnlyMemory<TItem>, TItem>
+    internal sealed class ReadOnlyMemoryAsBsonVectorSerializer<TItem> : TItemContainerAsBsonVectorSerializer<ReadOnlyMemory<TItem>, TItem>
          where TItem : struct
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="BsonVectorReadOnlyMemorySerializer{TItem}" /> class.
+        /// Initializes a new instance of the <see cref="ReadOnlyMemoryAsBsonVectorSerializer{TItem}" /> class.
         /// </summary>
-        public BsonVectorReadOnlyMemorySerializer(BsonVectorDataType bsonVectorDataType) : base(bsonVectorDataType)
+        public ReadOnlyMemoryAsBsonVectorSerializer(BsonVectorDataType bsonVectorDataType) : base(bsonVectorDataType)
         {
         }
 
-        private protected override ReadOnlySpan<TItem> GetItemsSpan(ReadOnlyMemory<TItem> data) =>
+        private protected override ReadOnlySpan<TItem> GetItemsContainerSpan(ReadOnlyMemory<TItem> data) =>
             data.Span;
 
         private protected override ReadOnlyMemory<TItem> CreateResult(TItem[] elements) =>
