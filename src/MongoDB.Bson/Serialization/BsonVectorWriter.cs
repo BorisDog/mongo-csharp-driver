@@ -21,7 +21,7 @@ namespace MongoDB.Bson.Serialization
 {
     internal static class BsonVectorWriter
     {
-        public static byte[] BsonVectorToBytes<T>(BsonVectorBase<T> bsonVector)
+        public static byte[] WriteToBytes<T>(BsonVectorBase<T> bsonVector)
             where T : struct
         {
             byte padding = 0;
@@ -30,10 +30,10 @@ namespace MongoDB.Bson.Serialization
                 padding = bsonVectorPackedBit.Padding;
             }
 
-            return VectorDataToBytes(bsonVector.Vector.Span, bsonVector.DataType, padding);
+            return WriteToBytes(bsonVector.Data.Span, bsonVector.DataType, padding);
         }
 
-        public static byte[] VectorDataToBytes<T>(ReadOnlySpan<T> vectorData, BsonVectorDataType bsonVectorDataType, byte padding)
+        public static byte[] WriteToBytes<T>(ReadOnlySpan<T> vectorData, BsonVectorDataType bsonVectorDataType, byte padding)
             where T : struct
         {
             if (!BitConverter.IsLittleEndian)

@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization
         public static BsonBinaryData ToBsonBinaryData<T>(this BsonVectorBase<T> bsonVector)
             where T : struct
         {
-            var bytes = BsonVectorWriter.BsonVectorToBytes(bsonVector);
+            var bytes = BsonVectorWriter.WriteToBytes(bsonVector);
             var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.Vector);
 
             return binaryData;

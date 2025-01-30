@@ -34,7 +34,7 @@ namespace MongoDB.Bson.Serialization
         {
             EnsureBsonVectorDataType(binaryData);
 
-            return BsonVectorReader.BsonVectorFromVectorData<T>(binaryData.Bytes);
+            return BsonVectorReader.ReadBsonVector<T>(binaryData.Bytes);
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace MongoDB.Bson.Serialization
         {
             EnsureBsonVectorDataType(binaryData);
 
-            return BsonVectorReader.ReadBsonVectorAsBytes(binaryData.Bytes);
+            return BsonVectorReader.ReadBsonVectorBytes(binaryData.Bytes);
         }
 
         internal static (T[] Elements, byte Padding, BsonVectorDataType vectorDataType) ToBsonVectorAsArray<T>(this BsonBinaryData binaryData)
@@ -55,7 +55,7 @@ namespace MongoDB.Bson.Serialization
         {
             EnsureBsonVectorDataType(binaryData);
 
-            return BsonVectorReader.BsonVectorFromVectorDataAsArray<T>(binaryData.Bytes);
+            return BsonVectorReader.ReadBsonVectorElements<T>(binaryData.Bytes);
         }
 
         private static void EnsureBsonVectorDataType(BsonBinaryData binaryData)

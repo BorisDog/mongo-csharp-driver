@@ -27,10 +27,10 @@ namespace MongoDB.Bson
         /// <summary>
         /// Initializes a new instance of the BsonVector class.
         /// </summary>
-        public BsonVectorBase(ReadOnlyMemory<T> vector, BsonVectorDataType dataType)
+        public BsonVectorBase(ReadOnlyMemory<T> data, BsonVectorDataType dataType)
         {
             DataType = dataType;
-            Vector = vector;
+            Data = data;
         }
 
         /// <summary>
@@ -39,9 +39,9 @@ namespace MongoDB.Bson
         public BsonVectorDataType DataType { get; }
 
         /// <summary>
-        /// Gets the vector.
+        /// Gets the vector data.
         /// </summary>
-        public ReadOnlyMemory<T> Vector { get; }
+        public ReadOnlyMemory<T> Data { get; }
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Initializes a new instance of the BsonVectorFloat32 class.
         /// </summary>
-        public BsonVectorFloat32(ReadOnlyMemory<float> vector) : base(vector, BsonVectorDataType.Float32)
+        public BsonVectorFloat32(ReadOnlyMemory<float> data) : base(data, BsonVectorDataType.Float32)
         {
         }
     }
@@ -65,7 +65,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Initializes a new instance of the BsonVectorInt8 class.
         /// </summary>
-        public BsonVectorInt8(ReadOnlyMemory<byte> vector) : base(vector, BsonVectorDataType.Int8)
+        public BsonVectorInt8(ReadOnlyMemory<byte> data) : base(data, BsonVectorDataType.Int8)
         {
         }
     }
@@ -79,14 +79,14 @@ namespace MongoDB.Bson
         /// <summary>
         /// Initializes a new instance of the BsonVectorPackedBit class.
         /// </summary>
-        public BsonVectorPackedBit(ReadOnlyMemory<byte> vector, byte padding) : base(vector, BsonVectorDataType.PackedBit)
+        public BsonVectorPackedBit(ReadOnlyMemory<byte> data, byte padding) : base(data, BsonVectorDataType.PackedBit)
         {
             if (padding < 0 || padding > 7)
             {
                 throw new ArgumentOutOfRangeException(nameof(padding), padding, "Padding is expected to be in the range of [0..7].");
             }
 
-            if (padding > 0 && vector.Length == 0)
+            if (padding > 0 && data.Length == 0)
             {
                 throw new ArgumentException("Can't specify non zero padding with no data.");
             }

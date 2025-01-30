@@ -23,7 +23,7 @@ namespace MongoDB.Bson.Serialization.Attributes
     /// Sets the representation for this field or property as BSON Vector and specifies the serialization options.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-    public class BsonVectorAttribute : Attribute, IBsonMemberMapAttribute
+    public sealed class BsonVectorAttribute : Attribute, IBsonMemberMapAttribute
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="BsonVectorAttribute"/> class.
@@ -48,6 +48,6 @@ namespace MongoDB.Bson.Serialization.Attributes
             memberMap.SetSerializer(serializer);
         }
 
-        private IBsonSerializer CreateSerializer(Type type) => BsonVectorSerializerBase.CreateSerializer(type, DataType);
+        private IBsonSerializer CreateSerializer(Type type) => BsonVectorSerializer.CreateSerializer(type, DataType);
     }
 }

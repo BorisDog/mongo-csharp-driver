@@ -142,7 +142,7 @@ namespace MongoDB.Driver.Tests.Specifications.bson_corpus
                 case BsonVectorDataType.Float32:
                     {
                         var actualVector = vectorBsonData.ToBsonVector<float>();
-                        actualArray = actualVector.Vector.ToArray();
+                        actualArray = actualVector.Data.ToArray();
                         expectedArray = ToFloats(vector);
 
                         break;
@@ -151,7 +151,7 @@ namespace MongoDB.Driver.Tests.Specifications.bson_corpus
                 case BsonVectorDataType.PackedBit:
                     {
                         var actualVector = vectorBsonData.ToBsonVector<byte>();
-                        actualArray = actualVector.Vector.ToArray();
+                        actualArray = actualVector.Data.ToArray();
                         expectedArray = vector.Select(v => (byte)v).ToArray();
                         break;
                     }

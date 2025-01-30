@@ -21,18 +21,18 @@ namespace MongoDB.Bson.Serialization
 {
     internal static class BsonVectorReader
     {
-        public static BsonVectorBase<T> BsonVectorFromVectorData<T>(ReadOnlyMemory<byte> vectorData)
+        public static BsonVectorBase<T> ReadBsonVector<T>(ReadOnlyMemory<byte> vectorData)
             where T : struct
         {
-            var (elements, padding, vectorDataType) = BsonVectorFromVectorDataAsArray<T>(vectorData);
+            var (elements, padding, vectorDataType) = ReadBsonVectorElements<T>(vectorData);
 
             return CreateBsonVector(elements, padding, vectorDataType);
         }
 
-        public static (T[] Elements, byte Padding, BsonVectorDataType vectorDataType) BsonVectorFromVectorDataAsArray<T>(ReadOnlyMemory<byte> vectorData)
+        public static (T[] Elements, byte Padding, BsonVectorDataType vectorDataType) ReadBsonVectorElements<T>(ReadOnlyMemory<byte> vectorData)
             where T : struct
         {
-            var (vectorDataBytes, padding, vectorDataType) = ReadBsonVectorAsBytes(vectorData);
+            var (vectorDataBytes, padding, vectorDataType) = ReadBsonVectorBytes(vectorData);
             ValidateDataType<T>(vectorDataType);
 
             T[] elements;
@@ -61,7 +61,7 @@ namespace MongoDB.Bson.Serialization
             return (elements, padding, vectorDataType);
         }
 
-        public static (ReadOnlyMemory<byte> VectorDataBytes, byte Padding, BsonVectorDataType VectorDataType) ReadBsonVectorAsBytes(ReadOnlyMemory<byte> vectorData)
+        public static (ReadOnlyMemory<byte> VectorDataBytes, byte Padding, BsonVectorDataType VectorDataType) ReadBsonVectorBytes(ReadOnlyMemory<byte> vectorData)
         {
             if (vectorData.Length < 2)
             {
@@ -71,13 +71,13 @@ namespace MongoDB.Bson.Serialization
             var vectorDataSpan = vectorData.Span;
             var vectorDataType = (BsonVectorDataType)vectorDataSpan[0];
 
-            var paddingSizeBits = vectorDataSpan[1];
-            if (paddingSizeBits > 7)
+            var padding = vectorDataSpan[1];
+            if (padding > 7)
             {
-                throw new InvalidOperationException($"Invalid padding size {paddingSizeBits}");
+                throw new InvalidOperationException($"Invalid padding size {padding}");
             }
 
-            return (vectorData.Slice(2), paddingSizeBits, vectorDataType);
+            return (vectorData.Slice(2), padding, vectorDataType);
         }
 
         private static BsonVectorBase<T> CreateBsonVector<T>(T[] elements, byte padding, BsonVectorDataType vectorDataType)
@@ -124,7 +124,7 @@ namespace MongoDB.Bson.Serialization
 
             if (supportedType != typeof(T))
             {
-                throw new InvalidOperationException($"Type {typeof(T)} is not supported with {bsonVectorDataType} vector type. Supported types are [{supportedType}].");
+                throw new NotSupportedException($"Type {typeof(T)} is not supported with {bsonVectorDataType} vector type. Supported types are [{supportedType}].");
             }
         }
     }
