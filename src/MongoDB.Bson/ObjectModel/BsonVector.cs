@@ -21,13 +21,13 @@ namespace MongoDB.Bson
     /// <summary>
     /// Represents a BSON vector.
     /// </summary>
-    public abstract class BsonVectorBase<T>
-         where T : struct
+    public abstract class BsonVectorBase<TItem>
+         where TItem : struct
     {
         /// <summary>
         /// Initializes a new instance of the BsonVector class.
         /// </summary>
-        public BsonVectorBase(ReadOnlyMemory<T> data, BsonVectorDataType dataType)
+        protected BsonVectorBase(ReadOnlyMemory<TItem> data, BsonVectorDataType dataType)
         {
             DataType = dataType;
             Data = data;
@@ -41,7 +41,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the vector data.
         /// </summary>
-        public ReadOnlyMemory<T> Data { get; }
+        public ReadOnlyMemory<TItem> Data { get; }
     }
 
     /// <summary>

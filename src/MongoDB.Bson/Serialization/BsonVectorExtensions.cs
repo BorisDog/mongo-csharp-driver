@@ -21,13 +21,13 @@ namespace MongoDB.Bson.Serialization
     public static class BsonVectorExtensions
     {
         /// <summary>
-        /// Converts <see cref="BsonVectorBase{T}"/> to <see cref="BsonBinaryData"/>.
+        /// Converts <see cref="BsonVectorBase{TItemT}"/> to <see cref="BsonBinaryData"/>.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TItem"></typeparam>
         /// <param name="bsonVector">The BSON vector.</param>
         /// <returns>A <see cref="BsonBinaryData"/> instance.</returns>
-        public static BsonBinaryData ToBsonBinaryData<T>(this BsonVectorBase<T> bsonVector)
-            where T : struct
+        public static BsonBinaryData ToBsonBinaryData<TItem>(this BsonVectorBase<TItem> bsonVector)
+            where TItem : struct
         {
             var bytes = BsonVectorWriter.WriteToBytes(bsonVector);
             var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.Vector);
