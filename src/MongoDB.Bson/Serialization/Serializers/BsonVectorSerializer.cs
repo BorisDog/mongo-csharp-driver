@@ -160,9 +160,9 @@ namespace MongoDB.Bson.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public override sealed void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TItemContainer bsonVector)
+        public override sealed void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TItemContainer value)
         {
-            var binaryData = bsonVector.ToBsonBinaryData();
+            var binaryData = value.ToBsonBinaryData();
 
             context.Writer.WriteBinaryData(binaryData);
         }
