@@ -119,7 +119,7 @@ namespace MongoDB.Bson.Serialization
                 BsonVectorDataType.Float32 => typeof(float),
                 BsonVectorDataType.Int8 => typeof(byte),
                 BsonVectorDataType.PackedBit => typeof(byte),
-                _ => throw new ArgumentOutOfRangeException(nameof(bsonVectorDataType), bsonVectorDataType, "Unsupported vector datatype.")
+                _ => throw new ArgumentException(nameof(bsonVectorDataType), "Unsupported vector datatype.")
             };
 
             if (supportedType != typeof(TItem))
