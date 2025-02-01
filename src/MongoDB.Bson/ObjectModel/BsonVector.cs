@@ -25,9 +25,11 @@ namespace MongoDB.Bson
          where TItem : struct
     {
         /// <summary>
-        /// Initializes a new instance of the BsonVector class.
+        /// Initializes a new instance of the <see cref="BsonVectorBase{TItem}"/> class.
         /// </summary>
-        protected BsonVectorBase(ReadOnlyMemory<TItem> data, BsonVectorDataType dataType)
+        /// <param name="data">The vector data.</param>
+        /// <param name="dataType">Type of the vector data.</param>
+        internal protected BsonVectorBase(ReadOnlyMemory<TItem> data, BsonVectorDataType dataType)
         {
             DataType = dataType;
             Data = data;
@@ -81,7 +83,7 @@ namespace MongoDB.Bson
         /// </summary>
         public BsonVectorPackedBit(ReadOnlyMemory<byte> data, byte padding) : base(data, BsonVectorDataType.PackedBit)
         {
-            if (padding < 0 || padding > 7)
+            if (padding > 7)
             {
                 throw new ArgumentOutOfRangeException(nameof(padding), padding, "Padding is expected to be in the range of [0..7].");
             }

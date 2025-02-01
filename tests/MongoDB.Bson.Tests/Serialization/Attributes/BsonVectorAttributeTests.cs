@@ -77,7 +77,7 @@ namespace MongoDB.Bson.Tests.Serialization.Attributes
             var exception = Record.Exception(() => classMap.AutoMap());
 
             exception.Should().BeOfType<NotSupportedException>();
-            exception.Message.Should().Be($"Type {memberInfo.PropertyType} is not supported for a binary vector.");
+            exception.Message.Should().Be($"Type {memberInfo.PropertyType} cannot be serialized as a binary vector.");
         }
 
         [Fact]

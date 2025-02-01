@@ -16,12 +16,12 @@
 namespace MongoDB.Bson.Serialization
 {
     /// <summary>
-    /// Contains extensions methods for <see cref="BsonVectorBase{T}"/>
+    /// Contains extensions methods for <see cref="BsonVectorBase{TItem}"/>
     /// </summary>
     public static class BsonVectorExtensions
     {
         /// <summary>
-        /// Converts <see cref="BsonVectorBase{TItemT}"/> to <see cref="BsonBinaryData"/>.
+        /// Converts <see cref="BsonVectorBase{TItem}"/> to <see cref="BsonBinaryData"/>.
         /// </summary>
         /// <typeparam name="TItem"></typeparam>
         /// <param name="bsonVector">The BSON vector.</param>

@@ -20,18 +20,18 @@ using MongoDB.Bson.Serialization;
 namespace MongoDB.Driver
 {
     /// <summary>
-    /// Contains extensions methods for <see cref="BsonVectorBase{T}"/>
+    /// Contains extensions methods for <see cref="BsonVectorBase{TItem}"/>
     /// </summary>
     public static class BsonVectorDriverExtensions
     {
         /// <summary>
-        /// Converts <see cref="BsonVectorBase{T}"/> to <see cref="BsonBinaryData"/>.
+        /// Converts <see cref="BsonVectorBase{TItem}"/> to <see cref="BsonBinaryData"/>.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TItem"></typeparam>
         /// <param name="bsonVector">The BSON vector.</param>
         /// <returns>A <see cref="BsonBinaryData"/> instance.</returns>
-        public static QueryVector ToQueryVector<T>(this BsonVectorBase<T> bsonVector)
-            where T : struct =>
+        public static QueryVector ToQueryVector<TItem>(this BsonVectorBase<TItem> bsonVector)
+            where TItem  : struct =>
             bsonVector switch
             {
                 BsonVectorFloat32 bsonVectorFloat32 => new(bsonVectorFloat32.ToBsonBinaryData()),

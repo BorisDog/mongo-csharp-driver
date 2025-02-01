@@ -32,7 +32,7 @@ namespace MongoDB.Bson.Serialization
         public static BsonVectorBase<TItem> ToBsonVector<TItem>(this BsonBinaryData binaryData)
             where TItem : struct
         {
-            EnsureBsonVectorDataType(binaryData);
+            EnsureBsonVectorSubType(binaryData);
 
             return BsonVectorReader.ReadBsonVector<TItem>(binaryData.Bytes);
         }
@@ -43,22 +43,28 @@ namespace MongoDB.Bson.Serialization
         /// </summary>
         /// <param name="binaryData">The binary data.</param>
         /// <returns>Vector bytes, padding and datatype</returns>
-        public static (ReadOnlyMemory<byte> VectorDataBytes, byte Padding, BsonVectorDataType VectorDataType) ToBsonVectorAsBytes(this BsonBinaryData binaryData)
+        public static (ReadOnlyMemory<byte> Byte, byte Padding, BsonVectorDataType VectorDataType) ToBsonVectorAsBytes(this BsonBinaryData binaryData)
         {
-            EnsureBsonVectorDataType(binaryData);
+            EnsureBsonVectorSubType(binaryData);
 
             return BsonVectorReader.ReadBsonVectorAsBytes(binaryData.Bytes);
         }
 
-        internal static (TItem[] Items, byte Padding, BsonVectorDataType vectorDataType) ToBsonVectorAsArray<TItem>(this BsonBinaryData binaryData)
+        /// <summary>
+        /// Extracts Bson vector data from <see cref="BsonBinaryData"/> as an array of <typeparamref name="TItem"/>, padding and data type.
+        /// The result bytes should be interpreted according to the vector data type.
+        /// </summary>
+        /// <param name="binaryData">The binary data.</param>
+        /// <returns>Vector data, padding and datatype</returns>
+        public static (TItem[] Items, byte Padding, BsonVectorDataType vectorDataType) ToBsonVectorAsArray<TItem>(this BsonBinaryData binaryData)
             where TItem : struct
         {
-            EnsureBsonVectorDataType(binaryData);
+            EnsureBsonVectorSubType(binaryData);
 
             return BsonVectorReader.ReadBsonVectorAsArray<TItem>(binaryData.Bytes);
         }
 
-        private static void EnsureBsonVectorDataType(BsonBinaryData binaryData)
+        private static void EnsureBsonVectorSubType(BsonBinaryData binaryData)
         {
             if (binaryData.SubType != BsonBinarySubType.Vector)
             {

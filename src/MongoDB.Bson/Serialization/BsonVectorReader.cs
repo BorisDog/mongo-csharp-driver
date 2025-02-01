@@ -29,13 +29,13 @@ namespace MongoDB.Bson.Serialization
             return CreateBsonVector(items, padding, vectorDataType);
         }
 
-        public static (TItem[] Items, byte Padding, BsonVectorDataType vectorDataType) ReadBsonVectorAsArray<TItem>(ReadOnlyMemory<byte> vectorData)
+        public static (TItem[] Items, byte Padding, BsonVectorDataType VectorDataType) ReadBsonVectorAsArray<TItem>(ReadOnlyMemory<byte> vectorData)
             where TItem : struct
         {
             var (vectorDataBytes, padding, vectorDataType) = ReadBsonVectorAsBytes(vectorData);
-            ValidateDataType<TItem>(vectorDataType);
+            ValidateItemType<TItem>(vectorDataType);
 
-            TItem[] elements;
+            TItem[] items;
 
             switch (vectorDataType)
             {
@@ -43,7 +43,7 @@ namespace MongoDB.Bson.Serialization
                     if (BitConverter.IsLittleEndian)
                     {
                         var singles = MemoryMarshal.Cast<byte, float>(vectorDataBytes.Span);
-                        elements = (TItem[])(object)singles.ToArray();
+                        items = (TItem[])(object)singles.ToArray();
                     }
                     else
                     {
@@ -52,20 +52,20 @@ namespace MongoDB.Bson.Serialization
                     break;
                 case BsonVectorDataType.Int8:
                 case BsonVectorDataType.PackedBit:
-                    elements = (TItem[])(object)vectorDataBytes.ToArray();
+                    items = (TItem[])(object)vectorDataBytes.ToArray();
                     break;
                 default:
                     throw new NotSupportedException($"Vector data type {vectorDataType} is not supported");
             }
 
-            return (elements, padding, vectorDataType);
+            return (items, padding, vectorDataType);
         }
 
-        public static (ReadOnlyMemory<byte> VectorDataBytes, byte Padding, BsonVectorDataType VectorDataType) ReadBsonVectorAsBytes(ReadOnlyMemory<byte> vectorData)
+        public static (ReadOnlyMemory<byte> Byte, byte Padding, BsonVectorDataType VectorDataType) ReadBsonVectorAsBytes(ReadOnlyMemory<byte> vectorData)
         {
             if (vectorData.Length < 2)
             {
-                throw new InvalidOperationException($"Invalid {nameof(vectorData)} size {vectorData.Length}");
+                throw new ArgumentException($"Invalid {nameof(vectorData)} size {vectorData.Length}", nameof(vectorData));
             }
 
             var vectorDataSpan = vectorData.Span;
@@ -74,7 +74,7 @@ namespace MongoDB.Bson.Serialization
             var padding = vectorDataSpan[1];
             if (padding > 7)
             {
-                throw new InvalidOperationException($"Invalid padding size {padding}");
+                throw new FormatException($"Invalid padding size {padding}");
             }
 
             return (vectorData.Slice(2), padding, vectorDataType);
@@ -86,35 +86,29 @@ namespace MongoDB.Bson.Serialization
             switch (vectorDataType)
             {
                 case BsonVectorDataType.Float32:
-                    {
                         return new BsonVectorFloat32(AsTypedArrayOrThrow<float>()) as BsonVectorBase<TItem>;
-                    }
                 case BsonVectorDataType.Int8:
-                    {
                         return new BsonVectorInt8(AsTypedArrayOrThrow<byte>()) as BsonVectorBase<TItem>;
-                    }
                 case BsonVectorDataType.PackedBit:
-                    {
                         return new BsonVectorPackedBit(AsTypedArrayOrThrow<byte>(), padding) as BsonVectorBase<TItem>;
-                    }
                 default:
                     throw new NotSupportedException($"Vector data type {vectorDataType} is not supported");
             }
 
-            TActualItem[] AsTypedArrayOrThrow<TActualItem>()
+            TExpectedItem[] AsTypedArrayOrThrow<TExpectedItem>()
             {
-                if (items is not TActualItem[] result)
+                if (items is not TExpectedItem[] result)
                 {
-                    throw new InvalidOperationException($"Type {typeof(TItem)} is not supported with {vectorDataType} vector type.");
+                    throw new ArgumentException($"Item type {typeof(TItem)} is not supported with {vectorDataType} vector type, expected {typeof(TExpectedItem)}.");
                 }
 
                 return result;
             }
         }
 
-        public static void ValidateDataType<TItem>(BsonVectorDataType bsonVectorDataType)
+        public static void ValidateItemType<TItem>(BsonVectorDataType bsonVectorDataType)
         {
-            var supportedType = bsonVectorDataType switch
+            var expectedItemType = bsonVectorDataType switch
             {
                 BsonVectorDataType.Float32 => typeof(float),
                 BsonVectorDataType.Int8 => typeof(byte),
@@ -122,9 +116,9 @@ namespace MongoDB.Bson.Serialization
                 _ => throw new ArgumentException(nameof(bsonVectorDataType), "Unsupported vector datatype.")
             };
 
-            if (supportedType != typeof(TItem))
+            if (expectedItemType != typeof(TItem))
             {
-                throw new NotSupportedException($"Type {typeof(TItem)} is not supported with {bsonVectorDataType} vector type. Supported types are [{supportedType}].");
+                throw new NotSupportedException($"Item type {typeof(TItem)} is not supported with {bsonVectorDataType} vector type, expected item type to be {expectedItemType}.");
             }
         }
     }

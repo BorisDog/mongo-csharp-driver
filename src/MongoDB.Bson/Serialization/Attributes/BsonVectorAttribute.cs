@@ -20,7 +20,7 @@ using MongoDB.Bson.Serialization.Serializers;
 namespace MongoDB.Bson.Serialization.Attributes
 {
     /// <summary>
-    /// Sets the representation for this field or property as BSON Vector and specifies the serialization options.
+    /// Sets the representation for this field or property as a BSON Vector with the specified data type.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
     public sealed class BsonVectorAttribute : Attribute, IBsonMemberMapAttribute
@@ -34,7 +34,7 @@ namespace MongoDB.Bson.Serialization.Attributes
         }
 
         /// <summary>
-        /// Gets the vector data type representation.
+        /// Gets the vector data type.
         /// </summary>
         public BsonVectorDataType DataType { get; init; }
 

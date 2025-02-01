@@ -69,7 +69,7 @@ namespace MongoDB.Bson.Tests.Serialization
 
             var exception = Record.Exception(() => DeserializeFromBinaryData<byte[]>(vectorBson, subject));
             exception.Should().BeOfType<FormatException>();
-            exception.Message.Should().Contain("Padding");
+            exception.Message.Should().Contain("padding");
         }
 
         [Theory]
@@ -200,7 +200,7 @@ namespace MongoDB.Bson.Tests.Serialization
 
             var exception = Record.Exception(() => DeserializeFromBinaryData<Memory<byte>>(vectorBson, subject));
             exception.Should().BeOfType<FormatException>();
-            exception.Message.Should().Contain("Padding");
+            exception.Message.Should().Contain("padding");
         }
 
         [Theory]
@@ -243,7 +243,7 @@ namespace MongoDB.Bson.Tests.Serialization
 
             var exception = Record.Exception(() => DeserializeFromBinaryData<ReadOnlyMemory<byte>>(vectorBson, subject));
             exception.Should().BeOfType<FormatException>();
-            exception.Message.Should().Contain("Padding");
+            exception.Message.Should().Contain("padding");
         }
 
         [Fact]
