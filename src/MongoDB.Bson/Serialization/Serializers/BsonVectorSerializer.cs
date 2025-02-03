@@ -258,7 +258,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// Represents a serializer for <see cref="ReadOnlyMemory{TItem}"/> represented as a BsonVector.
     /// </summary>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class ReadOnlyMemoryAsBsonVectorSerializer<TItem> : ItemContainerAsBsonVectorSerializer<ReadOnlyMemory<TItem>, TItem>
+    public sealed class ReadOnlyMemoryAsBsonVectorSerializer<TItem> : ItemContainerAsBsonVectorSerializer<ReadOnlyMemory<TItem>, TItem>
          where TItem : struct
     {
         /// <summary>
