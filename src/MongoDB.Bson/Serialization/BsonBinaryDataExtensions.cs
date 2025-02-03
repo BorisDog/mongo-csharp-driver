@@ -43,7 +43,7 @@ namespace MongoDB.Bson.Serialization
         /// </summary>
         /// <param name="binaryData">The binary data.</param>
         /// <returns>Vector bytes, padding and datatype</returns>
-        public static (ReadOnlyMemory<byte> Byte, byte Padding, BsonVectorDataType VectorDataType) ToBsonVectorAsBytes(this BsonBinaryData binaryData)
+        public static (ReadOnlyMemory<byte> Bytes, byte Padding, BsonVectorDataType VectorDataType) ToBsonVectorAsBytes(this BsonBinaryData binaryData)
         {
             EnsureBsonVectorSubType(binaryData);
 
@@ -56,7 +56,7 @@ namespace MongoDB.Bson.Serialization
         /// </summary>
         /// <param name="binaryData">The binary data.</param>
         /// <returns>Vector data, padding and datatype</returns>
-        public static (TItem[] Items, byte Padding, BsonVectorDataType vectorDataType) ToBsonVectorAsArray<TItem>(this BsonBinaryData binaryData)
+        public static (TItem[] Items, byte Padding, BsonVectorDataType VectorDataType) ToBsonVectorAsArray<TItem>(this BsonBinaryData binaryData)
             where TItem : struct
         {
             EnsureBsonVectorSubType(binaryData);

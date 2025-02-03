@@ -61,7 +61,7 @@ namespace MongoDB.Bson.Serialization
             return (items, padding, vectorDataType);
         }
 
-        public static (ReadOnlyMemory<byte> Byte, byte Padding, BsonVectorDataType VectorDataType) ReadBsonVectorAsBytes(ReadOnlyMemory<byte> vectorData)
+        public static (ReadOnlyMemory<byte> Bytes, byte Padding, BsonVectorDataType VectorDataType) ReadBsonVectorAsBytes(ReadOnlyMemory<byte> vectorData)
         {
             if (vectorData.Length < 2)
             {
@@ -86,11 +86,11 @@ namespace MongoDB.Bson.Serialization
             switch (vectorDataType)
             {
                 case BsonVectorDataType.Float32:
-                        return new BsonVectorFloat32(AsTypedArrayOrThrow<float>()) as BsonVectorBase<TItem>;
+                    return new BsonVectorFloat32(AsTypedArrayOrThrow<float>()) as BsonVectorBase<TItem>;
                 case BsonVectorDataType.Int8:
-                        return new BsonVectorInt8(AsTypedArrayOrThrow<byte>()) as BsonVectorBase<TItem>;
+                    return new BsonVectorInt8(AsTypedArrayOrThrow<byte>()) as BsonVectorBase<TItem>;
                 case BsonVectorDataType.PackedBit:
-                        return new BsonVectorPackedBit(AsTypedArrayOrThrow<byte>(), padding) as BsonVectorBase<TItem>;
+                    return new BsonVectorPackedBit(AsTypedArrayOrThrow<byte>(), padding) as BsonVectorBase<TItem>;
                 default:
                     throw new NotSupportedException($"Vector data type {vectorDataType} is not supported");
             }

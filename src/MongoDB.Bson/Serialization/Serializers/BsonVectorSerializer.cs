@@ -88,14 +88,14 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     /// <typeparam name="TItemContainer">The items container, for example <see cref="BsonVectorBase{TItem}"/> or <see cref="Memory{TItem}"/>.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal abstract class BsonVectorSerializerBase<TItemContainer, TItem> : SerializerBase<TItemContainer>
+    public abstract class BsonVectorSerializerBase<TItemContainer, TItem> : SerializerBase<TItemContainer>
          where TItem : struct
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="BsonVectorSerializerBase{TItemContainer, TItem}"/> class.
         /// </summary>
         /// <param name="bsonVectorDataType">Type of the bson vector data.</param>
-        protected BsonVectorSerializerBase(BsonVectorDataType bsonVectorDataType)
+        private protected BsonVectorSerializerBase(BsonVectorDataType bsonVectorDataType)
         {
             BsonVectorReader.ValidateItemType<TItem>(bsonVectorDataType);
 
@@ -121,6 +121,10 @@ namespace MongoDB.Bson.Serialization.Serializers
                 object.Equals(VectorDataType, other.VectorDataType);
         }
 
+        /// <summary>
+        /// Reads bson binary data.
+        /// </summary>
+        /// <param name="bsonReader">The bson reader.</param>
         protected BsonBinaryData ReadAndValidateBsonBinaryData(IBsonReader bsonReader)
         {
             var bsonType = bsonReader.GetCurrentBsonType();
@@ -138,9 +142,9 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// <summary>
     /// Represents a serializer for <see cref="BsonVectorBase{TItem}"/>.
     /// </summary>
-    /// <typeparam name="TItemContainer">The concrete type derived from <see cref="BsonVectorBase{TItems}"/>.</typeparam>
+    /// <typeparam name="TItemContainer">The concrete type derived from <see cref="BsonVectorBase{TItem}"/>.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class BsonVectorSerializer<TItemContainer, TItem> : BsonVectorSerializerBase<TItemContainer, TItem>
+    public sealed class BsonVectorSerializer<TItemContainer, TItem> : BsonVectorSerializerBase<TItemContainer, TItem>
         where TItemContainer : BsonVectorBase<TItem>
         where TItem : struct
     {
@@ -173,7 +177,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     /// <typeparam name="TItemContainer">The collection type.</typeparam>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal abstract class ItemContainerAsBsonVectorSerializer<TItemContainer, TItem> : BsonVectorSerializerBase<TItemContainer, TItem>
+    public abstract class ItemContainerAsBsonVectorSerializer<TItemContainer, TItem> : BsonVectorSerializerBase<TItemContainer, TItem>
          where TItem : struct
     {
         /// <summary>
@@ -216,7 +220,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// Represents a serializer for <typeparamref name="TItem"/> arrays represented as a BsonVector.
     /// </summary>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class ArrayAsBsonVectorSerializer<TItem> : ItemContainerAsBsonVectorSerializer<TItem[], TItem>
+    public sealed class ArrayAsBsonVectorSerializer<TItem> : ItemContainerAsBsonVectorSerializer<TItem[], TItem>
          where TItem : struct
     {
         /// <summary>
@@ -235,7 +239,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// Represents a serializer for <see cref="Memory{TItem}"/> represented as a BsonVector.
     /// </summary>
     /// <typeparam name="TItem">The .NET data type.</typeparam>
-    internal sealed class MemoryAsBsonVectorSerializer<TItem> : ItemContainerAsBsonVectorSerializer<Memory<TItem>, TItem>
+    public sealed class MemoryAsBsonVectorSerializer<TItem> : ItemContainerAsBsonVectorSerializer<Memory<TItem>, TItem>
          where TItem : struct
     {
         /// <summary>

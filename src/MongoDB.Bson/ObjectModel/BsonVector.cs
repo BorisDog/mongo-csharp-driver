@@ -29,7 +29,7 @@ namespace MongoDB.Bson
         /// </summary>
         /// <param name="data">The vector data.</param>
         /// <param name="dataType">Type of the vector data.</param>
-        internal protected BsonVectorBase(ReadOnlyMemory<TItem> data, BsonVectorDataType dataType)
+        private protected BsonVectorBase(ReadOnlyMemory<TItem> data, BsonVectorDataType dataType)
         {
             DataType = dataType;
             Data = data;

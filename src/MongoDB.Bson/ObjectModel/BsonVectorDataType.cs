@@ -18,21 +18,21 @@ namespace MongoDB.Bson.ObjectModel
     /// <summary>
     /// Represents the data type of a BSON Vector.
     /// </summary>
-    /// <seealso cref="BsonVectorBase{T}"/>
+    /// <seealso cref="BsonVectorBase{TItem}"/>
     public enum BsonVectorDataType
     {
         /// <summary>
-        /// Data type is float32
+        /// Data type is float32.
         /// </summary>
         Float32 = 0x27,
 
         /// <summary>
-        /// Data type is int8
+        /// Data type is int8.
         /// </summary>
         Int8 = 0x03,
 
         /// <summary>
-        /// Data type is packed bit
+        /// Data type is packed bit.
         /// </summary>
         PackedBit = 0x10
     }
