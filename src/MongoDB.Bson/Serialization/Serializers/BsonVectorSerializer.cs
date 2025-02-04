@@ -19,6 +19,70 @@ using MongoDB.Bson.ObjectModel;
 
 namespace MongoDB.Bson.Serialization.Serializers
 {
+    internal static class BsonVectorSerializer
+    {
+        public static BsonVectorSerializer<BsonVectorFloat32, float> BsonVectorFloat32Serializer { get; } = new BsonVectorSerializer<BsonVectorFloat32, float>(BsonVectorDataType.Float32);
+        public static BsonVectorSerializer<BsonVectorInt8, byte> BsonVectorInt8Serializer { get; } = new BsonVectorSerializer<BsonVectorInt8, byte>(BsonVectorDataType.Int8);
+        public static BsonVectorSerializer<BsonVectorPackedBit, byte> BsonVectorPackedBitSerializer { get; } = new BsonVectorSerializer<BsonVectorPackedBit, byte>(BsonVectorDataType.PackedBit);
+
+        public static IBsonSerializer CreateArraySerializer(Type itemType, BsonVectorDataType bsonVectorDataType) =>
+            CreateSerializerInstance(typeof(ArrayAsBsonVectorSerializer<>).MakeGenericType(itemType), bsonVectorDataType);
+
+        public static IBsonSerializer CreateBsonVectorSerializer(Type bsonVectorType, Type itemType, BsonVectorDataType bsonVectorDataType) =>
+            CreateSerializerInstance(typeof(BsonVectorSerializer<,>).MakeGenericType(bsonVectorType, itemType), bsonVectorDataType);
+
+        public static IBsonSerializer CreateMemorySerializer(Type itemType, BsonVectorDataType bsonVectorDataType) =>
+            CreateSerializerInstance(typeof(MemoryAsBsonVectorSerializer<>).MakeGenericType(itemType), bsonVectorDataType);
+
+        public static IBsonSerializer CreateReadonlyMemorySerializer(Type itemType, BsonVectorDataType bsonVectorDataType) =>
+            CreateSerializerInstance(typeof(ReadOnlyMemoryAsBsonVectorSerializer<>).MakeGenericType(itemType), bsonVectorDataType);
+
+        public static IBsonSerializer CreateSerializer(Type type, BsonVectorDataType bsonVectorDataType)
+        {
+            // Arrays
+            if (type.IsArray)
+            {
+                var itemType = type.GetElementType();
+                return CreateArraySerializer(itemType, bsonVectorDataType);
+            }
+
+            // BsonVector
+            if (type == typeof(BsonVectorFloat32) ||
+                type == typeof(BsonVectorInt8) ||
+                type == typeof(BsonVectorPackedBit))
+            {
+                return CreateBsonVectorSerializer(type, GetItemType(type.BaseType), bsonVectorDataType);
+            }
+
+            // Memory/ReadonlyMemory
+            var genericTypeDefinition = type.IsGenericType ? type.GetGenericTypeDefinition() : null;
+            if (genericTypeDefinition == typeof(Memory<>))
+            {
+                return CreateMemorySerializer(GetItemType(type), bsonVectorDataType);
+            }
+            else if (genericTypeDefinition == typeof(ReadOnlyMemory<>))
+            {
+                return CreateReadonlyMemorySerializer(GetItemType(type), bsonVectorDataType);
+            }
+
+            throw new NotSupportedException($"Type {type} cannot be serialized as a binary vector.");
+
+            Type GetItemType(Type containerType)
+            {
+                var genericArguments = containerType.GetGenericArguments();
+                if (genericArguments.Length != 1)
+                {
+                    throw new NotSupportedException($"Type {type} cannot be serialized as a binary vector.");
+                }
+
+                return genericArguments[0];
+            }
+        }
+
+        private static IBsonSerializer CreateSerializerInstance(Type serializerType, BsonVectorDataType bsonVectorDataType) =>
+             (IBsonSerializer)Activator.CreateInstance(serializerType, bsonVectorDataType);
+    }
+
     /// <summary>
     /// Represents a serializer for TItemContainer values represented as a BsonVector.
     /// </summary>
