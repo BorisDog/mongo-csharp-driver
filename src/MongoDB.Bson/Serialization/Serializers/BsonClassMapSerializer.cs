@@ -145,7 +145,7 @@ namespace MongoDB.Bson.Serialization
                     supportsInitialization.BeginInit();
                 }
             }
-            // Comment to delete 123
+            // Comment to delete 123123
             var discriminatorConvention = _classMap.GetDiscriminatorConvention();
             var allMemberMaps = _classMap.AllMemberMaps;
             var extraElementsMemberMapIndex = _classMap.ExtraElementsMemberMapIndex;
