@@ -16,6 +16,7 @@
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
+using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization.Serializers;
 
 namespace MongoDB.Bson.Serialization
@@ -32,6 +33,7 @@ namespace MongoDB.Bson.Serialization
         private readonly bool _memberTypeIsBsonValue;
 
         private string _elementName;
+        private ReadOnlyMemory<byte>? _elementNameUtfBytes;
         private bool _frozen; // once a class map has been frozen no further changes are allowed
         private int _order;
         private Func<object, object> _getter;
@@ -240,6 +242,20 @@ namespace MongoDB.Bson.Serialization
                        _memberInfo.DeclaringType.Name,
                        _memberInfo is FieldInfo ? "field" : "property"));
                 }
+            }
+        }
+
+        internal ReadOnlyMemory<byte> NameBytesUtf
+        {
+            get
+            {
+                if (_elementNameUtfBytes == null)
+                {
+                    var bytes = Utf8Encodings.Strict.GetBytes(_elementName);
+                    _elementNameUtfBytes = new ReadOnlyMemory<byte>([..bytes, 0]);
+                }
+
+                return _elementNameUtfBytes.Value;
             }
         }
 

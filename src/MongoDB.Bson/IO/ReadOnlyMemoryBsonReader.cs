@@ -21,7 +21,7 @@ using System.Text;
 
 namespace MongoDB.Bson.IO;
 
-internal sealed class ReadOnlyMemoryBsonReader : BsonReader
+internal sealed class ReadOnlyMemoryBsonReader : BsonReader, IBsonReaderInternal
 {
     private static readonly BsonReaderState[] __stateMap;
 
@@ -429,6 +429,42 @@ internal sealed class ReadOnlyMemoryBsonReader : BsonReader
         }
 
         return CurrentName;
+    }
+
+    public bool ValidateName(string suggestedName, ReadOnlyMemory<byte> suggestedNameBytes)
+    {
+        if (State == BsonReaderState.Type)
+        {
+            ReadBsonType();
+        }
+        if (State != BsonReaderState.Name)
+        {
+            ThrowInvalidState(nameof(ReadName), BsonReaderState.Name);
+        }
+
+        if (_memory.Length - _position < suggestedNameBytes.Length)
+        {
+            return false;
+        }
+
+        var span = _memory.Span.Slice(_position,  suggestedNameBytes.Length);
+
+        if (span.SequenceEqual(suggestedNameBytes.Span))
+        {
+            CurrentName = suggestedName;
+            _position += suggestedNameBytes.Length;
+
+            State = BsonReaderState.Value;
+
+            if (_context.ContextType == ContextType.Document)
+            {
+                _context.ElementName = CurrentName;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     /// <inheritdoc />

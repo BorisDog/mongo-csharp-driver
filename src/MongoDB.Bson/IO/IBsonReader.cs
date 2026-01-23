@@ -256,4 +256,9 @@ namespace MongoDB.Bson.IO
         /// </summary>
         void SkipValue();
     }
+
+    internal interface IBsonReaderInternal : IBsonReader
+    {
+        public bool ValidateName(string suggestedName, ReadOnlyMemory<byte> suggestedNameBytes);
+    }
 }

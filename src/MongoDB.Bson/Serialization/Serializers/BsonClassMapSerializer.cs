@@ -1,24 +1,23 @@
 /* Copyright 2010-present MongoDB Inc.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
@@ -110,6 +109,7 @@ namespace MongoDB.Bson.Serialization
         public TClass DeserializeClass(BsonDeserializationContext context)
         {
             var bsonReader = context.Reader;
+            var bsonReaderInternal = bsonReader as IBsonReaderInternal;
 
             var bsonType = bsonReader.GetCurrentBsonType();
             if (bsonType != BsonType.Document)
@@ -155,17 +155,17 @@ namespace MongoDB.Bson.Serialization
             var (lengthInUInts, useStackAlloc) = FastMemberMapHelper.GetLengthInUInts(allMemberMaps.Count);
             using var bitArray = useStackAlloc ? FastMemberMapHelper.GetMembersBitArray(stackalloc uint[lengthInUInts]) : FastMemberMapHelper.GetMembersBitArray(lengthInUInts);
 
+            TrieNameDecoder<int> trieDecoder = null;
+            var nextElementIndexHint = bsonReaderInternal == null || allMemberMaps.Count == 0 ? -1 : 0;
+
             bsonReader.ReadStartDocument();
-            var elementTrie = _classMap.ElementTrie;
-            var trieDecoder = new TrieNameDecoder<int>(elementTrie);
+
             while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
             {
-                var elementName = bsonReader.ReadName(trieDecoder);
+                var (memberMap, memberMapIndex, elementName) = ReadElementName();
 
-                if (trieDecoder.Found)
+                if (memberMap != null)
                 {
-                    var memberMapIndex = trieDecoder.Value;
-                    var memberMap = allMemberMaps[memberMapIndex];
                     if (memberMapIndex != extraElementsMemberMapIndex)
                     {
                         if (document != null)
@@ -286,6 +286,47 @@ namespace MongoDB.Bson.Serialization
                     supportsInitialization.EndInit();
                 }
                 return (TClass)document;
+            }
+
+            (BsonMemberMap, int, string) ReadElementName()
+            {
+                string elementName;
+                int memberMapIndex = -1;
+                BsonMemberMap memberMap = null;
+
+                if (nextElementIndexHint >= 0)
+                {
+                    var suggestedMemberMap = allMemberMaps[nextElementIndexHint];
+                    if (bsonReaderInternal.ValidateName(suggestedMemberMap.ElementName, suggestedMemberMap.NameBytesUtf))
+                    {
+                        memberMapIndex = nextElementIndexHint;
+                        memberMap = suggestedMemberMap;
+
+                        nextElementIndexHint++;
+                    }
+                    else
+                    {
+                        nextElementIndexHint = -1; // Stop using hints, fallback to trie
+                    }
+                }
+
+                if (memberMap == null)
+                {
+                    trieDecoder ??= new(_classMap.ElementTrie);
+                    elementName = bsonReader.ReadName(trieDecoder);
+
+                    if (trieDecoder.Found)
+                    {
+                        memberMapIndex = trieDecoder.Value;
+                        memberMap = allMemberMaps[memberMapIndex];
+                    }
+                }
+                else
+                {
+                    elementName = memberMap.ElementName;
+                }
+
+                return (memberMap, memberMapIndex, elementName);
             }
 
             return CreateInstanceUsingCreator(values);

@@ -15,6 +15,7 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -49,25 +50,82 @@ namespace MongoDB.Bson.Tests.Serialization
         // public methods
         [Theory]
         [ParameterAttributeData]
-        public void Deserialize_should_not_throw_when_all_required_elements_present(
+        public void Deserialize_should_not_throw_when_all_required_elements_are_present(
             [Values(0, 1, 8, 23, 63, 111, 127, 128, 129, 555, 1024, 2500)]int membersCount)
         {
-            var subject = BuildTypeAndGetSerializer("Prop", membersCount);
-            var properties = Enumerable
-                .Range(0, membersCount)
-                .Select(i => $"\"Prop_{i}\" : \"Value_{i}\"");
-            var json = $"{{{string.Join(",", properties)}}}";
+            var subject = BuildTypeAndGetSerializer(membersCount);
+            var json = BuildJson(Enumerable.Range(0, membersCount));
 
             using var reader = new JsonReader(json);
             var context = BsonDeserializationContext.CreateRoot(reader);
 
             var obj = subject.Deserialize(context);
 
-            for (var i = 0; i < membersCount; i++)
+            ValidateObject(obj, Enumerable.Range(0, membersCount));
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void Deserialize_should_not_use_trie_when_all_elements_are_present([Values(0, 1, 8, 23)]int membersCount)
+        {
+            var subject = BuildTypeAndGetSerializer(membersCount);
+            var json = BuildJson(Enumerable.Range(0, membersCount));
+
+            var bson = BsonDocument.Parse(json).ToBson();
+
+            var bsonReaderMock = new Mock<ReadOnlyMemoryBsonReaderProxy>(new ReadOnlyMemory<byte>(bson))
             {
-                Reflector.GetFieldValue(obj, $"Prop_{i}", BindingFlags.Public | BindingFlags.Instance)
-                    .Should().Be($"Value_{i}");
-            }
+                CallBase = true
+            };
+
+            var context = BsonDeserializationContext.CreateRoot(bsonReaderMock.Object);
+            var obj = subject.Deserialize(context);
+
+            ValidateObject(obj, Enumerable.Range(0, membersCount));
+
+            bsonReaderMock.Verify(r => r.ReadName(It.IsAny<INameDecoder>()), Times.Never);
+            bsonReaderMock.Verify(r => r.ValidateName(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<byte>>()),
+                Times.Exactly(membersCount));
+        }
+
+        [Theory]
+        [MemberData(nameof(Deserialize_should_fallback_to_trie_when_some_elements_are_not_in_sequential_order_MemberData))]
+        public void Deserialize_should_fallback_to_trie_when_some_elements_are_not_in_sequential_order(
+            int pocoMembersCount,
+            int[] actualDataMembersIndexes,
+            int expectedTrieInvocations,
+            int expectedValidateNameInvocations)
+        {
+            var subject = BuildTypeAndGetSerializer(pocoMembersCount, isMemberRequired: false, ignoreExtraElements: true);
+            var json = BuildJson(actualDataMembersIndexes);
+            var bson = BsonDocument.Parse(json).ToBson();
+
+            var bsonReaderMock = new Mock<ReadOnlyMemoryBsonReaderProxy>(new ReadOnlyMemory<byte>(bson))
+            {
+                CallBase = true
+            };
+
+            var context = BsonDeserializationContext.CreateRoot(bsonReaderMock.Object);
+            var obj = subject.Deserialize(context);
+
+            ValidateObject(obj, actualDataMembersIndexes.Where(i => i < pocoMembersCount));
+
+            bsonReaderMock.Verify(r => r.ReadName(It.IsAny<INameDecoder>()), Times.Exactly(expectedTrieInvocations));
+            bsonReaderMock.Verify(r => r.ValidateName(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<byte>>()), Times.Exactly(expectedValidateNameInvocations));
+        }
+
+        public static IEnumerable<object[]> Deserialize_should_fallback_to_trie_when_some_elements_are_not_in_sequential_order_MemberData()
+        {
+            yield return [1, new[] { 0 }, 0, 1 ];
+            yield return [1, Array.Empty<int>(), 0, 0];
+            yield return [10, Enumerable.Range(0, 10).Except([1]).ToArray(), 8, 2];
+            yield return [10, Enumerable.Range(0, 10).Except([8]).ToArray(), 1, 9];
+            yield return [10, Enumerable.Range(0, 10).Except([9]).ToArray(), 0, 9];
+            yield return [10, Enumerable.Range(0, 10).Except([3, 5]).ToArray(), 5, 4];
+            yield return [10, Enumerable.Range(0, 10).Reverse().ToArray(), 10, 1];
+            yield return [32, Enumerable.Range(0, 32).Except([20]).ToArray(), 11, 21];
+            yield return [32, Enumerable.Range(0, 32).Except([20]).Concat([90]).ToArray(), 12, 21];
+            yield return [32, Enumerable.Range(0, 32).Except([20]).Concat([90, 100, 20]).ToArray(), 14, 21];
         }
 
         [Theory]
@@ -87,12 +145,9 @@ namespace MongoDB.Bson.Tests.Serialization
         [InlineData(1024, 1023)]
         public void Deserialize_should_throw_FormatException_when_required_element_is_not_found(int membersCount, int missingMemberIndex)
         {
-            var subject = BuildTypeAndGetSerializer("Prop", membersCount);
-            var properties = Enumerable
-                .Range(0, membersCount)
-                .Except([missingMemberIndex])
-                .Select(i => $"\"Prop_{i}\" : \"Value_{i}\"");
-            var json = $"{{{string.Join(",", properties)}}}";
+            var memberIndexes = Enumerable.Range(0, membersCount).Except([missingMemberIndex]).ToArray();
+            var subject = BuildTypeAndGetSerializer(membersCount);
+            var json = BuildJson(memberIndexes);
 
             using var reader = new JsonReader(json);
             var context = BsonDeserializationContext.CreateRoot(reader);
@@ -294,7 +349,7 @@ namespace MongoDB.Bson.Tests.Serialization
             result.Should().Be(0);
         }
 
-        private IBsonSerializer BuildTypeAndGetSerializer(string propertyNamePrefix, int propertiesCount)
+        private IBsonSerializer BuildTypeAndGetSerializer(int propertiesCount, bool isMemberRequired = true, bool ignoreExtraElements = false)
         {
             var assemblyName = new AssemblyName("DynamicAssembly");
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
@@ -304,7 +359,7 @@ namespace MongoDB.Bson.Tests.Serialization
 
             for (var i = 0; i < propertiesCount; i++)
             {
-                _ = typeBuilder.DefineField($"{propertyNamePrefix}_{i}",
+                _ = typeBuilder.DefineField($"Prop_{i}",
                     typeof(string),
                     FieldAttributes.Public);
             }
@@ -316,14 +371,27 @@ namespace MongoDB.Bson.Tests.Serialization
             {
                 classMap
                     .MapField($"Prop_{i}")
-                    .SetIsRequired(true);
+                    .SetIsRequired(isMemberRequired);
             }
+            classMap.SetIgnoreExtraElements(ignoreExtraElements);
             classMap.Freeze();
 
             var classMapSerializerType = typeof(BsonClassMapSerializer<>).MakeGenericType(newType);
             var classMapSerializer = (IBsonSerializer)Activator.CreateInstance(classMapSerializerType, classMap);
 
             return classMapSerializer;
+        }
+
+        private static string BuildJson(IEnumerable<int> memberIndexes) =>
+            $"{{{string.Join(",", memberIndexes.Select(i => $"\"Prop_{i}\" : \"Value_{i}\""))}}}";
+
+        private static void ValidateObject(object obj, IEnumerable<int> memberIndexes)
+        {
+            foreach (var index in  memberIndexes)
+            {
+                Reflector.GetFieldValue(obj, $"Prop_{index}", BindingFlags.Public | BindingFlags.Instance)
+                    .Should().Be($"Value_{index}");
+            }
         }
 
         // nested classes
